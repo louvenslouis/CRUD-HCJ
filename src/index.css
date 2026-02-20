@@ -1,0 +1,292 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Notion Light Theme Tokens */
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-hover: #efefef;
+  --surface-active: #e8e8e8;
+  --sidebar-bg: #f7f6f3;
+  --text: #37352f;
+  --text-muted: #787774;
+  --primary: #2383e2;
+  /* Notion blue */
+  --border: rgba(55, 53, 47, 0.09);
+  --radius: 3px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --header-height: 45px;
+  --sidebar-width: 240px;
+}
+
+[data-theme='dark'] {
+  /* Notion Dark Theme Tokens */
+  --background: #191919;
+  --surface: #191919;
+  --surface-hover: #2c2c2c;
+  --surface-active: #323232;
+  --sidebar-bg: #202020;
+  --text: rgba(255, 255, 255, 0.9);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --primary: #2383e2;
+  --border: rgba(255, 255, 255, 0.09);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+  background-color: var(--background);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--sidebar-bg);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  transition: transform 0.2s ease;
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.sidebar-header:hover {
+  background-color: var(--surface-hover);
+}
+
+.sidebar-nav {
+  padding: 12px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.nav-item:hover {
+  background-color: var(--surface-hover);
+}
+
+.nav-item.active {
+  background-color: var(--surface-active);
+  font-weight: 500;
+}
+
+.nav-item svg {
+  color: var(--text-muted);
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  height: var(--header-height);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: none;
+}
+
+.header-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-body {
+  padding: 32px 64px;
+  flex: 1;
+  overflow-y: auto;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .content-body {
+    padding: 24px 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .content-body {
+    padding: 16px;
+  }
+}
+
+/* Notion Table Style */
+.table-container {
+  margin-top: 16px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  text-transform: none;
+  /* Notion doesn't uppercase headers by default */
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+tr:hover {
+  background-color: var(--surface-hover);
+}
+
+/* Buttons and Controls */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  transition: background-color 0.1s;
+}
+
+.btn:hover {
+  background-color: var(--surface-hover);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-icon {
+  padding: 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+
+/* Forms */
+.card {
+  background: var(--surface);
+  border: none;
+  box-shadow: none;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+input {
+  width: 100%;
+  padding: 8px 10px;
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  transition: background-color 0.1s;
+}
+
+input:focus {
+  outline: none;
+  background-color: var(--surface-hover);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-body>* {
+  animation: fadeIn 0.3s ease-out;
+}

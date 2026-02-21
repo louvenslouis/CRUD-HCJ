@@ -19,10 +19,14 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [columns, setColumns] = useState([]);
     const [visibleColumns, setVisibleColumns] = useState([]);
     const [showColumnManager, setShowColumnManager] = useState(false);
+    const [sortConfig, setSortConfig] = useState(null); // { key, direction: 'asc' | 'desc' }
+    const [showSortManager, setShowSortManager] = useState(false);
+    const [columnFilters, setColumnFilters] = useState({}); // { col: value }
+    const [showFilterManager, setShowFilterManager] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(0);
-    const pageSize = 15;
+    const pageSize = 100;
 
     useEffect(() => {
         fetchData();
@@ -103,11 +107,27 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
         }
     };
 
-    const filteredData = data.filter(item =>
-        Object.values(item).some(val =>
-            String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-    );
+    const filteredData = data
+        .filter(item => {
+            // Global search
+            const globalMatch = Object.values(item).some(val =>
+                String(val).toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            if (!globalMatch) return false;
+
+            // Column filters
+            return Object.entries(columnFilters).every(([col, filterVal]) => {
+                if (!filterVal) return true;
+                return String(item[col] || '').toLowerCase().includes(filterVal.toLowerCase());
+            });
+        })
+        .sort((a, b) => {
+            if (!sortConfig) return 0;
+            const { key, direction } = sortConfig;
+            if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
+            if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
 
     return (
         <div>
@@ -141,8 +161,73 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                             }}
                         />
                     </div>
-                    <button className="btn" style={{ border: 'none' }}><Filter size={14} /> Filter</button>
-                    <button className="btn" style={{ border: 'none' }}><ArrowUpDown size={14} /> Sort</button>
+                    <div style={{ position: 'relative' }}>
+                        <button className="btn" onClick={() => setShowFilterManager(!showFilterManager)} style={{ border: 'none' }}>
+                            <Filter size={14} /> Filter {Object.values(columnFilters).some(v => v) && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary)', marginLeft: '4px' }}></span>}
+                        </button>
+                        {showFilterManager && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, mt: '4px',
+                                backgroundColor: 'var(--background)', border: '1px solid var(--border)',
+                                borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                zIndex: 100, width: '220px', padding: '8px 0'
+                            }}>
+                                <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                                    Filters
+                                    {Object.values(columnFilters).some(v => v) && <span onClick={() => setColumnFilters({})} style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 400 }}>Clear All</span>}
+                                </div>
+                                <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '0 12px' }}>
+                                    {columns.map(col => (
+                                        <div key={col} style={{ margin: '8px 0' }}>
+                                            <div style={{ fontSize: '12px', marginBottom: '4px' }}>{col.replace('_', ' ')}</div>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                placeholder={`Filter ${col.replace('_', ' ')}...`}
+                                                value={columnFilters[col] || ''}
+                                                onChange={(e) => setColumnFilters({ ...columnFilters, [col]: e.target.value })}
+                                                style={{ width: '100%', padding: '4px 8px', fontSize: '12px' }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <button className="btn" onClick={() => setShowSortManager(!showSortManager)} style={{ border: 'none' }}>
+                            <ArrowUpDown size={14} /> Sort {sortConfig && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary)', marginLeft: '4px' }}></span>}
+                        </button>
+                        {showSortManager && (
+                            <div style={{
+                                position: 'absolute', top: '100%', left: 0, mt: '4px',
+                                backgroundColor: 'var(--background)', border: '1px solid var(--border)',
+                                borderRadius: '4px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                zIndex: 100, width: '200px', padding: '8px 0'
+                            }}>
+                                <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Sort by</div>
+                                {columns.map(col => (
+                                    <div key={col} style={{ display: 'flex', gap: '4px', padding: '4px 12px' }}>
+                                        <span style={{ fontSize: '13px', flex: 1 }}>{col.replace('_', ' ')}</span>
+                                        <button
+                                            className={`btn-icon ${sortConfig?.key === col && sortConfig?.direction === 'asc' ? 'active' : ''}`}
+                                            onClick={() => setSortConfig(sortConfig?.key === col && sortConfig?.direction === 'asc' ? null : { key: col, direction: 'asc' })}
+                                            style={{ backgroundColor: sortConfig?.key === col && sortConfig?.direction === 'asc' ? 'var(--surface-hover)' : 'transparent' }}
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            className={`btn-icon ${sortConfig?.key === col && sortConfig?.direction === 'desc' ? 'active' : ''}`}
+                                            onClick={() => setSortConfig(sortConfig?.key === col && sortConfig?.direction === 'desc' ? null : { key: col, direction: 'desc' })}
+                                            style={{ backgroundColor: sortConfig?.key === col && sortConfig?.direction === 'desc' ? 'var(--surface-hover)' : 'transparent' }}
+                                        >
+                                            ↓
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <div style={{ position: 'relative' }}>
                         <button className="btn" onClick={() => setShowColumnManager(!showColumnManager)} style={{ border: 'none' }}>
                             <MoreHorizontal size={14} /> Columns

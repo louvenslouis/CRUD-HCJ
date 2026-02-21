@@ -3,16 +3,38 @@ import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
 import EntityForm from './components/EntityForm';
 import Dashboard from './components/Dashboard';
-import { Sun, Moon, Command, Search as SearchIcon } from 'lucide-react';
+import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 function App() {
   const tables = ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties'];
   const inactiveTables = ['timesheet', 'ordonnances'];
   const [currentTable, setCurrentTable] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [theme, setTheme] = useState('light');
+
+  // Sidebar resize handler
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    const onMouseMove = (e) => {
+      const newWidth = Math.min(400, Math.max(180, startWidth + (e.clientX - startX)));
+      setSidebarWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -60,9 +82,56 @@ function App() {
         onTableChange={(t) => { setCurrentTable(t); setIsSearchOpen(false); }}
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        width={sidebarCollapsed ? 0 : sidebarWidth}
+        collapsed={sidebarCollapsed}
       />
 
-      <main className="main-content">
+      {/* Resize handle */}
+      {!sidebarCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          style={{
+            position: 'fixed',
+            left: sidebarWidth - 2,
+            top: 0,
+            width: '5px',
+            height: '100vh',
+            cursor: 'col-resize',
+            zIndex: 1001,
+            backgroundColor: isResizing ? 'var(--primary)' : 'transparent',
+            transition: isResizing ? 'none' : 'background-color 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
+          onMouseLeave={(e) => { if (!isResizing) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        />
+      )}
+
+      {/* Sidebar collapse/expand toggle */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        style={{
+          position: 'fixed',
+          left: sidebarCollapsed ? 8 : sidebarWidth - 14,
+          top: 12,
+          zIndex: 1002,
+          width: '28px',
+          height: '28px',
+          borderRadius: '50%',
+          border: '1px solid var(--border)',
+          backgroundColor: 'var(--background)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          transition: 'left 0.2s ease',
+        }}
+        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {sidebarCollapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+      </button>
+
+      <main className="main-content" style={{ marginLeft: sidebarCollapsed ? 0 : sidebarWidth, transition: 'margin-left 0.2s ease' }}>
         <header className="header">
           <div className="header-title" style={{ gap: '12px' }}>
             <button

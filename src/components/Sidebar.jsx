@@ -13,7 +13,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 
-const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar }) => {
+const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false }) => {
     const tableIcons = {
         medicaments: <Package size={18} />,
         stock: <Database size={18} />,
@@ -25,7 +25,7 @@ const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOp
     };
 
     return (
-        <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className={`sidebar ${isOpen ? 'open' : ''}`} style={{ width: collapsed ? 0 : width, minWidth: collapsed ? 0 : width, overflow: 'hidden', transition: 'width 0.2s ease, min-width 0.2s ease', padding: collapsed ? 0 : undefined }}>
             <div className="sidebar-header">
                 <div style={{ backgroundColor: '#ff5f56', width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 12, fontWeight: 'bold' }}>H</div>
                 <span>Hopital de Juvenat</span>

@@ -16,6 +16,10 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formTableName, setFormTableName] = useState(null);
+  const [formInitialData, setFormInitialData] = useState(null);
+  const [lockedFields, setLockedFields] = useState([]);
+  const [upsertStock, setUpsertStock] = useState(false);
   const [theme, setTheme] = useState('light');
 
   // Sidebar resize handler
@@ -45,16 +49,29 @@ function App() {
 
   const handleEdit = (entity) => {
     setEditingEntity(entity);
+    setFormTableName(currentTable);
+    setFormInitialData(null);
+    setLockedFields([]);
+    setUpsertStock(false);
     setIsFormOpen(true);
   };
 
-  const handleCreate = () => {
+  const handleCreate = (options = {}) => {
+    const targetTable = options.tableName || currentTable;
     setEditingEntity(null);
+    setFormTableName(targetTable);
+    setFormInitialData(options.initialData || null);
+    setLockedFields(options.lockedFields || []);
+    setUpsertStock(Boolean(options.upsertStock));
     setIsFormOpen(true);
   };
 
   const handleSave = () => {
     setIsFormOpen(false);
+    setFormTableName(null);
+    setFormInitialData(null);
+    setLockedFields([]);
+    setUpsertStock(false);
     const table = currentTable;
     setCurrentTable('');
     setTimeout(() => setCurrentTable(table), 10);
@@ -216,9 +233,18 @@ function App() {
 
           {isFormOpen && (
             <EntityForm
-              tableName={currentTable}
+              tableName={formTableName || currentTable}
               entity={editingEntity}
-              onClose={() => setIsFormOpen(false)}
+              initialData={formInitialData}
+              lockedFields={lockedFields}
+              upsertStock={upsertStock}
+              onClose={() => {
+                setIsFormOpen(false);
+                setFormTableName(null);
+                setFormInitialData(null);
+                setLockedFields([]);
+                setUpsertStock(false);
+              }}
               onSave={handleSave}
             />
           )}

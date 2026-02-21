@@ -384,9 +384,26 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                         </td>
                                     ))}
                                     <td style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '4px', opacity: 0.5 }}>
-                                            <button className="btn-icon" onClick={() => onEdit(item)}><Edit2 size={14} /></button>
-                                            <button className="btn-icon" onClick={() => handleDelete(item.id)}><Trash2 size={14} /></button>
+                                        <div style={{ display: 'flex', gap: '4px', opacity: 0.5, justifyContent: 'flex-end' }}>
+                                            {tableName === 'medicaments' && (
+                                                <button
+                                                    className="btn-icon"
+                                                    title="Add stock"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onCreate({
+                                                            tableName: 'stock',
+                                                            initialData: { medicaments_id: item.id, institution_id: 1 },
+                                                            lockedFields: ['medicaments_id', 'institution_id'],
+                                                            upsertStock: true,
+                                                        });
+                                                    }}
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
+                                            )}
+                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); onEdit(item); }}><Edit2 size={14} /></button>
+                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>

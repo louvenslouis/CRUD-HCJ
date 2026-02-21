@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { X, Save, Loader2, Maximize2, MoreHorizontal } from 'lucide-react';
 
-const EntityForm = ({ tableName, entity, onClose, onSave }) => {
+const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertStock = false, onClose, onSave }) => {
     const tableTemplates = {
         stock: ['medicaments_id', 'institution_id', 'quantite', 'prix_vente'],
         patients: ['prenom', 'nom', 'date_naissance', 'sexe', 'telephone'],
@@ -20,7 +20,10 @@ const EntityForm = ({ tableName, entity, onClose, onSave }) => {
         return tableTemplates[tableName] || [];
     };
 
-    const [formData, setFormData] = useState(entity || {});
+    const [formData, setFormData] = useState(() => ({
+        ...(initialData || {}),
+        ...(entity || {})
+    }));
     const [loading, setLoading] = useState(false);
     const fields = getInitialFields();
 
@@ -44,6 +47,9 @@ const EntityForm = ({ tableName, entity, onClose, onSave }) => {
         fields.forEach(f => {
             if (formData[f] !== undefined) dataToSave[f] = formData[f];
         });
+        if (tableName === 'stock' && (dataToSave.institution_id === undefined || dataToSave.institution_id === null)) {
+            dataToSave.institution_id = 1;
+        }
 
         try {
             let error;
@@ -51,8 +57,25 @@ const EntityForm = ({ tableName, entity, onClose, onSave }) => {
                 const res = await supabase.from(tableName).update(dataToSave).eq('id', entity.id);
                 error = res.error;
             } else {
-                const res = await supabase.from(tableName).insert([dataToSave]);
-                error = res.error;
+                if (tableName === 'stock' && upsertStock) {
+                    const { data: existing, error: existingError } = await supabase
+                        .from('stock')
+                        .select('id')
+                        .eq('medicaments_id', dataToSave.medicaments_id)
+                        .eq('institution_id', dataToSave.institution_id)
+                        .maybeSingle();
+                    if (existingError) throw existingError;
+                    if (existing?.id) {
+                        const res = await supabase.from('stock').update(dataToSave).eq('id', existing.id);
+                        error = res.error;
+                    } else {
+                        const res = await supabase.from('stock').insert([dataToSave]);
+                        error = res.error;
+                    }
+                } else {
+                    const res = await supabase.from(tableName).insert([dataToSave]);
+                    error = res.error;
+                }
             }
             if (error) throw error;
             onSave();
@@ -116,7 +139,14 @@ const EntityForm = ({ tableName, entity, onClose, onSave }) => {
                                         name={field}
                                         value={formData[field] === null ? '' : formData[field] || ''}
                                         onChange={handleChange}
-                                        style={{ border: 'none', padding: '4px 0', fontSize: '14px' }}
+                                        readOnly={lockedFields.includes(field)}
+                                        style={{
+                                            border: 'none',
+                                            padding: '4px 0',
+                                            fontSize: '14px',
+                                            opacity: lockedFields.includes(field) ? 0.7 : 1,
+                                            cursor: lockedFields.includes(field) ? 'not-allowed' : 'text',
+                                        }}
                                         placeholder={`Empty`}
                                     />
                                 </div>

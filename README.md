@@ -1,4 +1,5 @@
-# React + Vite
+# Hopital de Juvenat - CRUD HCJ
+Live Demo: [https://louvenslouis.github.io/CRUD-HCJ/](https://louvenslouis.github.io/CRUD-HCJ/)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

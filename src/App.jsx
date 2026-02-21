@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import DataTable from './components/DataTable';
 import EntityForm from './components/EntityForm';
 import Dashboard from './components/Dashboard';
+import RequisitionView from './components/RequisitionView';
 import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 function App() {
@@ -202,6 +203,8 @@ function App() {
         <div className="content-body">
           {currentTable === 'dashboard' ? (
             <Dashboard onNavigate={setCurrentTable} />
+          ) : currentTable === 'requisition' ? (
+            <RequisitionView />
           ) : currentTable && (
             <DataTable
               key={currentTable}

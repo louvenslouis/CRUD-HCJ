@@ -237,20 +237,21 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                 position: 'absolute',
                                 top: '100%',
                                 right: 0,
-                                mt: '4px',
+                                marginTop: '4px',
                                 backgroundColor: 'var(--background)',
                                 border: '1px solid var(--border)',
                                 borderRadius: '4px',
                                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                 zIndex: 100,
-                                width: '180px',
-                                padding: '8px 0'
+                                width: '200px',
+                                padding: '8px 0',
+                                color: 'var(--text)'
                             }}>
                                 <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Visible Columns</div>
                                 {columns.map(col => (
                                     <div
                                         key={col}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', cursor: 'pointer' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', cursor: 'pointer' }}
                                         onClick={() => {
                                             if (visibleColumns.includes(col)) {
                                                 if (visibleColumns.length > 1) {
@@ -267,10 +268,11 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                             readOnly
                                             style={{ cursor: 'pointer' }}
                                         />
-                                        <span style={{ fontSize: '13px' }}>{col.replace('_', ' ')}</span>
+                                        <span style={{ fontSize: '13px', color: 'var(--text)' }}>{col.replace(/_/g, ' ')}</span>
                                     </div>
                                 ))}
                             </div>
+
                         )}
                     </div>
                     <button className="btn" onClick={handleExportCSV} style={{ border: 'none' }} title="Export to CSV">

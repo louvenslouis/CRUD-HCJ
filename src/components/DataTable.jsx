@@ -402,8 +402,26 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                                     <Plus size={14} />
                                                 </button>
                                             )}
-                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); onEdit(item); }}><Edit2 size={14} /></button>
-                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}><Trash2 size={14} /></button>
+                                            <button
+                                                className="btn-icon"
+                                                disabled={tableName === 'stock'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (tableName !== 'stock') onEdit(item);
+                                                }}
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button
+                                                className="btn-icon"
+                                                disabled={tableName === 'stock'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (tableName !== 'stock') handleDelete(item.id);
+                                                }}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

@@ -11,7 +11,8 @@ import {
     Filter,
     ArrowUpDown,
     MoreHorizontal,
-    Download
+    Download,
+    X
 } from 'lucide-react';
 
 const DataTable = ({ tableName, onEdit, onCreate }) => {
@@ -26,7 +27,19 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(0);
+    const [selectedRequisition, setSelectedRequisition] = useState(null);
     const pageSize = 100;
+
+    // Columns to auto-hide for requisition table
+    const hiddenRequisitionCols = ['posted', 'article'];
+
+    useEffect(() => {
+        setVisibleColumns([]);
+        setSelectedRequisition(null);
+        setSortConfig(null);
+        setColumnFilters({});
+        setPage(0);
+    }, [tableName]);
 
     useEffect(() => {
         fetchData();
@@ -66,7 +79,12 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 setData(processedData);
                 const cols = Object.keys(processedData[0]);
                 setColumns(cols);
-                if (visibleColumns.length === 0) setVisibleColumns(cols);
+                if (visibleColumns.length === 0) {
+                    const visible = tableName === 'requisition'
+                        ? cols.filter(c => !hiddenRequisitionCols.includes(c))
+                        : cols;
+                    setVisibleColumns(visible);
+                }
             } else {
                 setData([]);
                 setColumns([]);
@@ -119,9 +137,21 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             const { error } = await supabase.from('requisition').update({ etat: newEtat }).eq('id', id);
             if (error) throw error;
             setData(data.map(item => item.id === id ? { ...item, etat: newEtat } : item));
+            if (selectedRequisition && selectedRequisition.id === id) {
+                setSelectedRequisition({ ...selectedRequisition, etat: newEtat });
+            }
         } catch (error) {
             alert('Error: ' + error.message);
         }
+    };
+
+    const parseArticles = (article) => {
+        if (!article) return [];
+        try {
+            if (typeof article === 'string') return JSON.parse(article);
+            if (Array.isArray(article)) return article;
+            return [article];
+        } catch { return []; }
     };
 
     const filteredData = data
@@ -309,40 +339,32 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                         <thead>
                             <tr>
                                 {columns.filter(col => visibleColumns.includes(col)).map(col => (
-                                    <th key={col}>{col.replace('_', ' ').toUpperCase()}</th>
+                                    <th key={col} style={{ color: 'var(--text)' }}>{col.replace(/_/g, ' ').toUpperCase()}</th>
                                 ))}
                                 <th style={{ width: '40px' }}></th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredData.map((item, idx) => (
-                                <tr key={item.id || idx}>
+                                <tr key={item.id || idx} onClick={() => tableName === 'requisition' && setSelectedRequisition(item)} style={tableName === 'requisition' ? { cursor: 'pointer' } : {}}>
                                     {columns.filter(col => visibleColumns.includes(col)).map(col => (
                                         <td key={col} style={{
-                                            color: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? '#eb5757' : 'inherit',
+                                            color: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? '#eb5757' : 'var(--text)',
                                             fontWeight: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? 600 : 'inherit'
                                         }}>
                                             {tableName === 'requisition' && col === 'etat' ? (
-                                                <select
-                                                    value={item[col] || 'En Attente'}
-                                                    onChange={(e) => handleUpdateEtat(item.id, e.target.value)}
-                                                    style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid var(--border)',
-                                                        fontSize: '12px',
-                                                        fontWeight: 600,
-                                                        cursor: 'pointer',
-                                                        backgroundColor: (etatColors[item[col]] || etatColors['En Attente']).bg,
-                                                        color: (etatColors[item[col]] || etatColors['En Attente']).color,
-                                                    }}
-                                                >
-                                                    {etatOptions.map(opt => (
-                                                        <option key={opt} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
+                                                <span style={{
+                                                    padding: '3px 10px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    backgroundColor: (etatColors[item[col]] || etatColors['En Attente']).bg,
+                                                    color: (etatColors[item[col]] || etatColors['En Attente']).color,
+                                                }}>
+                                                    {item[col] || 'En Attente'}
+                                                </span>
                                             ) : (
-                                                <>{typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col])}</>
+                                                <>{typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col] ?? '')}</>
                                             )}
                                             {tableName === 'stock' && col === 'quantite' && item[col] < 20 && (
                                                 <span style={{
@@ -379,6 +401,94 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 <button className="btn-icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft size={16} /></button>
                 <button className="btn-icon" onClick={() => setPage(p => p + 1)} disabled={data.length < pageSize}><ChevronRight size={16} /></button>
             </div>
+
+            {/* Requisition Detail Modal */}
+            {selectedRequisition && (
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                    <div style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Réquisition #{selectedRequisition.id}</h2>
+                            <button className="btn-icon" onClick={() => setSelectedRequisition(null)}><X size={18} /></button>
+                        </div>
+
+                        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                            {/* Meta info */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Personnel</div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.personnel || '—'}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.created_at ? new Date(selectedRequisition.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+                                </div>
+                            </div>
+
+                            {/* Etat status switcher */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Statut</div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {etatOptions.map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => handleUpdateEtat(selectedRequisition.id, opt)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                borderRadius: '20px',
+                                                border: selectedRequisition.etat === opt ? '2px solid ' + etatColors[opt].color : '1px solid var(--border)',
+                                                backgroundColor: selectedRequisition.etat === opt ? etatColors[opt].bg : 'transparent',
+                                                color: selectedRequisition.etat === opt ? etatColors[opt].color : 'var(--text-muted)',
+                                                fontWeight: 600,
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Articles */}
+                            <div>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Articles</div>
+                                {parseArticles(selectedRequisition.article).length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {parseArticles(selectedRequisition.article).map((art, i) => (
+                                            <div key={i} style={{
+                                                padding: '12px 16px',
+                                                backgroundColor: 'var(--sidebar-bg)',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>{art.nom || art.name || art.Nom || art.article || `Article ${i + 1}`}</div>
+                                                    {art.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{art.description}</div>}
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    {(art.quantite || art.qty || art.quantity) && (
+                                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>×{art.quantite || art.qty || art.quantity}</div>
+                                                    )}
+                                                    {(art.prix || art.price || art.prix_unitaire) && (
+                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{art.prix || art.price || art.prix_unitaire} HTG</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '6px' }}>Aucun article</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

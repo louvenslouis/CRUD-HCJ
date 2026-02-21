@@ -17,6 +17,8 @@ import {
 const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [data, setData] = useState([]);
     const [columns, setColumns] = useState([]);
+    const [visibleColumns, setVisibleColumns] = useState([]);
+    const [showColumnManager, setShowColumnManager] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(0);
@@ -58,7 +60,9 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                     return item;
                 });
                 setData(processedData);
-                setColumns(Object.keys(processedData[0]));
+                const cols = Object.keys(processedData[0]);
+                setColumns(cols);
+                if (visibleColumns.length === 0) setVisibleColumns(cols);
             } else {
                 setData([]);
                 setColumns([]);
@@ -139,6 +143,51 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                     </div>
                     <button className="btn" style={{ border: 'none' }}><Filter size={14} /> Filter</button>
                     <button className="btn" style={{ border: 'none' }}><ArrowUpDown size={14} /> Sort</button>
+                    <div style={{ position: 'relative' }}>
+                        <button className="btn" onClick={() => setShowColumnManager(!showColumnManager)} style={{ border: 'none' }}>
+                            <MoreHorizontal size={14} /> Columns
+                        </button>
+                        {showColumnManager && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                right: 0,
+                                mt: '4px',
+                                backgroundColor: 'var(--background)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '4px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                zIndex: 100,
+                                width: '180px',
+                                padding: '8px 0'
+                            }}>
+                                <div style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Visible Columns</div>
+                                {columns.map(col => (
+                                    <div
+                                        key={col}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', cursor: 'pointer' }}
+                                        onClick={() => {
+                                            if (visibleColumns.includes(col)) {
+                                                if (visibleColumns.length > 1) {
+                                                    setVisibleColumns(visibleColumns.filter(c => c !== col));
+                                                }
+                                            } else {
+                                                setVisibleColumns([...visibleColumns, col]);
+                                            }
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={visibleColumns.includes(col)}
+                                            readOnly
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        <span style={{ fontSize: '13px' }}>{col.replace('_', ' ')}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <button className="btn" onClick={handleExportCSV} style={{ border: 'none' }} title="Export to CSV">
                         <Download size={14} /> Export
                     </button>
@@ -155,7 +204,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                     <table>
                         <thead>
                             <tr>
-                                {columns.map(col => (
+                                {columns.filter(col => visibleColumns.includes(col)).map(col => (
                                     <th key={col}>{col.replace('_', ' ').toUpperCase()}</th>
                                 ))}
                                 <th style={{ width: '40px' }}></th>
@@ -164,7 +213,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                         <tbody>
                             {filteredData.map((item, idx) => (
                                 <tr key={item.id || idx}>
-                                    {columns.map(col => (
+                                    {columns.filter(col => visibleColumns.includes(col)).map(col => (
                                         <td key={col} style={{
                                             color: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? '#eb5757' : 'inherit',
                                             fontWeight: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? 600 : 'inherit'

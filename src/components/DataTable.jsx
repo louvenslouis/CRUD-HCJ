@@ -177,13 +177,13 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
         });
 
     return (
-        <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <div className="data-table">
+            <div className="data-table-title-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <h1 style={{ fontSize: '24px', fontWeight: '700' }}>{tableName.charAt(0).toUpperCase() + tableName.slice(1)}</h1>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                <div style={{ display: 'flex', gap: '16px' }}>
+            <div className="data-table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                <div className="data-table-tabs" style={{ display: 'flex', gap: '16px' }}>
                     <div className="btn" style={{ border: 'none', padding: '4px 8px' }}>
                         <span style={{ borderBottom: '2px solid var(--text)', paddingBottom: '6px' }}>Table</span>
                     </div>
@@ -191,8 +191,8 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                         <span>Board</span>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <div style={{ position: 'relative' }}>
+                <div className="data-table-actions" style={{ display: 'flex', gap: '8px' }}>
+                    <div className="data-table-search" style={{ position: 'relative' }}>
                         <Search size={14} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
@@ -431,7 +431,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '16px', gap: '12px' }}>
+            <div className="data-table-pagination" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '16px', gap: '12px' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{filteredData.length} records</span>
                 <button className="btn-icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft size={16} /></button>
                 <button className="btn-icon" onClick={() => setPage(p => p + 1)} disabled={data.length < pageSize}><ChevronRight size={16} /></button>
@@ -439,8 +439,8 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
 
             {/* Requisition Detail Modal */}
             {selectedRequisition && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
-                    <div style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'var(--modal-padding)' }}>
+                    <div className="modal-panel" style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Réquisition #{selectedRequisition.id}</h2>
@@ -449,7 +449,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
 
                         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
                             {/* Meta info */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                                 <div>
                                     <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Personnel</div>
                                     <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.personnel || '—'}</div>

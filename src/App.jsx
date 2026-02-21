@@ -4,7 +4,7 @@ import DataTable from './components/DataTable';
 import EntityForm from './components/EntityForm';
 import Dashboard from './components/Dashboard';
 import RequisitionView from './components/RequisitionView';
-import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
 
 function App() {
   const tables = ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties', 'requisition'];
@@ -92,17 +92,25 @@ function App() {
   }, []);
 
   return (
-    <div className="app-container" data-theme={theme}>
+    <div
+      className="app-container"
+      data-theme={theme}
+      style={{ '--sidebar-live-width': sidebarCollapsed ? '0px' : `${sidebarWidth}px` }}
+    >
       <Sidebar
         tables={tables}
         inactiveTables={inactiveTables}
         activeTable={currentTable}
-        onTableChange={(t) => { setCurrentTable(t); setIsSearchOpen(false); }}
+        onTableChange={(t) => { setCurrentTable(t); setIsSearchOpen(false); setIsSidebarOpen(false); }}
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         width={sidebarCollapsed ? 0 : sidebarWidth}
         collapsed={sidebarCollapsed}
       />
+
+      {isSidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+      )}
 
       {/* Resize handle */}
       {!sidebarCollapsed && (
@@ -110,7 +118,7 @@ function App() {
           onMouseDown={handleMouseDown}
           style={{
             position: 'fixed',
-            left: sidebarWidth - 2,
+            left: 'calc(var(--sidebar-live-width) - 2px)',
             top: 0,
             width: '5px',
             height: '100vh',
@@ -119,6 +127,7 @@ function App() {
             backgroundColor: isResizing ? 'var(--primary)' : 'transparent',
             transition: isResizing ? 'none' : 'background-color 0.2s',
           }}
+          className="sidebar-resize-handle"
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--primary)'}
           onMouseLeave={(e) => { if (!isResizing) e.currentTarget.style.backgroundColor = 'transparent'; }}
         />
@@ -129,7 +138,7 @@ function App() {
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         style={{
           position: 'fixed',
-          left: sidebarCollapsed ? 8 : sidebarWidth - 14,
+          left: sidebarCollapsed ? 8 : 'calc(var(--sidebar-live-width) - 14px)',
           top: 12,
           zIndex: 1002,
           width: '28px',
@@ -144,16 +153,25 @@ function App() {
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           transition: 'left 0.2s ease',
         }}
+        className="sidebar-toggle"
         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {sidebarCollapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
       </button>
 
-      <main className="main-content" style={{ marginLeft: sidebarCollapsed ? 0 : sidebarWidth, transition: 'margin-left 0.2s ease' }}>
+      <main className="main-content">
         <header className="header">
-          <div className="header-title" style={{ gap: '12px' }}>
+          <div className="header-title header-left" style={{ gap: '12px' }}>
             <button
-              className="btn"
+              className="btn-icon mobile-only"
+              onClick={() => setIsSidebarOpen(true)}
+              title="Open sidebar"
+              aria-label="Open sidebar"
+            >
+              <Menu size={18} />
+            </button>
+            <button
+              className="btn search-button"
               onClick={() => setIsSearchOpen(true)}
               style={{ border: 'none', backgroundColor: 'var(--surface-hover)', padding: '4px 12px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
@@ -162,7 +180,7 @@ function App() {
               <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: '8px' }}>⌘K</span>
             </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button className="btn-icon" onClick={toggleTheme} title="Toggle Theme">
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </button>
@@ -173,8 +191,8 @@ function App() {
         </header>
 
         {isSearchOpen && (
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, padding: '10vh 20px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', height: 'fit-content', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+          <div className="command-palette">
+            <div className="command-palette-panel">
               <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border)' }}>
                 <SearchIcon size={20} color="var(--text-muted)" />
                 <input

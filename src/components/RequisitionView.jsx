@@ -106,9 +106,9 @@ const RequisitionView = () => {
     );
 
     return (
-        <div style={{ padding: '20px' }}>
+        <div className="requisition-view" style={{ padding: '20px' }}>
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', backgroundColor: 'var(--sidebar-bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div className="requisition-tabs" style={{ display: 'flex', gap: '4px', marginBottom: '20px', backgroundColor: 'var(--sidebar-bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 {TABS.map(tab => (
                     <button
                         key={tab.key}
@@ -137,7 +137,7 @@ const RequisitionView = () => {
             </div>
 
             {/* Search */}
-            <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <div className="requisition-search" style={{ position: 'relative', marginBottom: '16px' }}>
                 <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                     type="text"
@@ -160,13 +160,14 @@ const RequisitionView = () => {
                     Aucune réquisition {activeTab === 'En Attente' ? 'en attente' : activeTab === 'Approuvé' ? 'approuvée' : 'rejetée'}
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="requisition-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {filtered.map(item => {
                         const articles = parseArticles(item.article);
                         return (
                             <div
                                 key={item.id}
                                 onClick={() => setSelectedReq(item)}
+                                className="requisition-card"
                                 style={{
                                     padding: '14px 16px',
                                     backgroundColor: 'var(--background)',
@@ -202,9 +203,9 @@ const RequisitionView = () => {
                                         ))}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="requisition-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     {activeTab === 'Approuvé' && (
-                                        <div style={{ display: 'flex', gap: '12px' }} onClick={e => e.stopPropagation()}>
+                                        <div className="requisition-card-toggles" style={{ display: 'flex', gap: '12px' }} onClick={e => e.stopPropagation()}>
                                             <ToggleSwitch value={item.proforma} onChange={() => handleToggle(item.id, 'proforma', item.proforma)} label="Proforma" />
                                             <ToggleSwitch value={item.livraison} onChange={() => handleToggle(item.id, 'livraison', item.livraison)} label="Livraison" />
                                         </div>
@@ -219,8 +220,8 @@ const RequisitionView = () => {
 
             {/* Detail Modal */}
             {selectedReq && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={() => setSelectedReq(null)}>
-                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '10px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'var(--modal-padding)' }} onClick={() => setSelectedReq(null)}>
+                    <div className="modal-panel" onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '10px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Réquisition #{selectedReq.id}</h2>
@@ -229,7 +230,7 @@ const RequisitionView = () => {
 
                         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
                             {/* Meta */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                                 <div>
                                     <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Personnel</div>
                                     <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedReq.personnel || '—'}</div>
@@ -267,7 +268,7 @@ const RequisitionView = () => {
 
                             {/* Proforma / Livraison switches — always visible in detail */}
                             {selectedReq.etat === 'Approuvé' && (
-                                <div style={{ marginBottom: '24px', display: 'flex', gap: '24px', padding: '14px 16px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <div className="requisition-detail-toggles" style={{ marginBottom: '24px', display: 'flex', gap: '24px', padding: '14px 16px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                                     <ToggleSwitch value={selectedReq.proforma} onChange={() => handleToggle(selectedReq.id, 'proforma', selectedReq.proforma)} label="Proforma" />
                                     <ToggleSwitch value={selectedReq.livraison} onChange={() => handleToggle(selectedReq.id, 'livraison', selectedReq.livraison)} label="Livraison" />
                                 </div>

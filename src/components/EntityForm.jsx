@@ -96,7 +96,7 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
     };
 
     return (
-        <div style={{
+        <div className="modal-overlay" style={{
             position: 'fixed',
             inset: 0,
             backgroundColor: 'rgba(55, 53, 47, 0.4)',
@@ -105,7 +105,7 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
             justifyContent: 'center',
             zIndex: 1000
         }}>
-            <div style={{
+            <div className="modal-panel entity-form-panel" style={{
                 width: '100%',
                 maxWidth: '700px',
                 backgroundColor: 'var(--background)',
@@ -116,21 +116,21 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
                 boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
             }}>
                 {/* Top Control Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div className="entity-form-topbar" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                    <div className="entity-form-topbar-left" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                         <button onClick={onClose} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             <ChevronLeft size={20} />
                         </button>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{tableName} / {entity ? entity.id : 'New'}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div className="entity-form-topbar-right" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Edited 2 mins ago</span>
                         <button className="btn" onClick={onClose}>Done</button>
                         <button className="btn-icon"><MoreHorizontal size={18} /></button>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ flex: 1, padding: '48px 96px', overflowY: 'auto' }}>
+                <form onSubmit={handleSubmit} className="entity-form" style={{ flex: 1, padding: '48px 96px', overflowY: 'auto' }}>
                     <div style={{ marginBottom: '40px' }}>
                         <h1 style={{ fontSize: '40px', fontWeight: '700', color: 'var(--text)', border: 'none', width: '100%', marginBottom: '8px' }}>
                             {entity ? `Record ${entity.id}` : 'New Record'}
@@ -139,11 +139,11 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: 'var(--border)' }}>
                         {fields.map(field => (
-                            <div key={field} style={{ display: 'flex', backgroundColor: 'var(--background)', padding: '12px 0' }}>
-                                <div style={{ width: '160px', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', alignItems: 'center' }}>
+                            <div key={field} className="entity-form-row" style={{ display: 'flex', backgroundColor: 'var(--background)', padding: '12px 0' }}>
+                                <div className="entity-form-label" style={{ width: '160px', color: 'var(--text-muted)', fontSize: '14px', display: 'flex', alignItems: 'center' }}>
                                     {field.replace('_', ' ')}
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div className="entity-form-input" style={{ flex: 1 }}>
                                     {tableName === 'medicaments' && field === 'Type' ? (
                                         <select
                                             name={field}

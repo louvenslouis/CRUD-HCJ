@@ -69,10 +69,10 @@ const Dashboard = ({ onNavigate }) => {
     );
 
     return (
-        <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
+        <div className="dashboard" style={{ animation: 'fadeIn 0.4s ease-out' }}>
             <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '24px' }}>Welcome back, Admin</h1>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+            <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <StatCard
                     title="Total Medications"
                     value={stats.totalMeds}
@@ -103,7 +103,7 @@ const Dashboard = ({ onNavigate }) => {
                 />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px' }}>
+            <div className="dashboard-sections" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px' }}>
                 <div className="card" style={{ padding: '24px', border: '1px solid var(--border)' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Quick Actions

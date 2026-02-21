@@ -10,6 +10,15 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         personnel: ['id', 'Nom', 'Prenom', 'role', 'Function', 'service', 'Mail', 'Phone'],
         timesheet: ['id_employe', 'activites', 'date', 'nombre_heure']
     };
+    const medicamentTypeOptions = [
+        'Comprimé',
+        'Goutte',
+        'Matériel médical',
+        'Sirop',
+        'Soluté',
+        'Solution injectable',
+        'lotion'
+    ];
 
     const getInitialFields = () => {
         if (entity) {
@@ -135,20 +144,48 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
                                     {field.replace('_', ' ')}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <input
-                                        name={field}
-                                        value={formData[field] === null ? '' : formData[field] || ''}
-                                        onChange={handleChange}
-                                        readOnly={lockedFields.includes(field)}
-                                        style={{
-                                            border: 'none',
-                                            padding: '4px 0',
-                                            fontSize: '14px',
-                                            opacity: lockedFields.includes(field) ? 0.7 : 1,
-                                            cursor: lockedFields.includes(field) ? 'not-allowed' : 'text',
-                                        }}
-                                        placeholder={`Empty`}
-                                    />
+                                    {tableName === 'medicaments' && field === 'Type' ? (
+                                        <select
+                                            name={field}
+                                            value={formData[field] === null ? '' : formData[field] || ''}
+                                            onChange={handleChange}
+                                            disabled={lockedFields.includes(field)}
+                                            style={{
+                                                border: 'none',
+                                                padding: '4px 0',
+                                                fontSize: '14px',
+                                                backgroundColor: 'transparent',
+                                                width: '100%',
+                                                color: 'var(--text)',
+                                                opacity: lockedFields.includes(field) ? 0.7 : 1,
+                                                cursor: lockedFields.includes(field) ? 'not-allowed' : 'pointer',
+                                            }}
+                                        >
+                                            <option value="" disabled>
+                                                Select type...
+                                            </option>
+                                            {medicamentTypeOptions.map(option => (
+                                                <option key={option} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            name={field}
+                                            value={formData[field] === null ? '' : formData[field] || ''}
+                                            onChange={handleChange}
+                                            readOnly={lockedFields.includes(field)}
+                                            style={{
+                                                border: 'none',
+                                                padding: '4px 0',
+                                                fontSize: '14px',
+                                                opacity: lockedFields.includes(field) ? 0.7 : 1,
+                                                cursor: lockedFields.includes(field) ? 'not-allowed' : 'text',
+                                            }}
+                                            placeholder={`Empty`}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         ))}

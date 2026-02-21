@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 function App() {
-  const tables = ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties'];
+  const tables = ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties', 'requisition'];
   const inactiveTables = ['timesheet', 'ordonnances'];
   const [currentTable, setCurrentTable] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

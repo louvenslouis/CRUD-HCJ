@@ -10,7 +10,8 @@ import {
     TrendingUp,
     FileText,
     ChevronRight,
-    ChevronDown
+    ChevronDown,
+    ClipboardList
 } from 'lucide-react';
 
 const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false }) => {
@@ -21,7 +22,8 @@ const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOp
         personnel: <User size={18} />,
         timesheet: <Clock size={18} />,
         ordonnances: <FileText size={18} />,
-        sorties: <TrendingUp size={18} />
+        sorties: <TrendingUp size={18} />,
+        requisition: <ClipboardList size={18} />
     };
 
     return (

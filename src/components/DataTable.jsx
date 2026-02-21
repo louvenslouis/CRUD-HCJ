@@ -107,6 +107,23 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
         }
     };
 
+    const etatOptions = ['En Attente', 'Rejeté', 'Approuvé'];
+    const etatColors = {
+        'En Attente': { bg: 'rgba(255, 183, 77, 0.15)', color: '#f5a623' },
+        'Approuvé': { bg: 'rgba(39, 174, 96, 0.15)', color: '#27ae60' },
+        'Rejeté': { bg: 'rgba(235, 87, 87, 0.15)', color: '#eb5757' }
+    };
+
+    const handleUpdateEtat = async (id, newEtat) => {
+        try {
+            const { error } = await supabase.from('requisition').update({ etat: newEtat }).eq('id', id);
+            if (error) throw error;
+            setData(data.map(item => item.id === id ? { ...item, etat: newEtat } : item));
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    };
+
     const filteredData = data
         .filter(item => {
             // Global search
@@ -305,7 +322,28 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                             color: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? '#eb5757' : 'inherit',
                                             fontWeight: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? 600 : 'inherit'
                                         }}>
-                                            {typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col])}
+                                            {tableName === 'requisition' && col === 'etat' ? (
+                                                <select
+                                                    value={item[col] || 'En Attente'}
+                                                    onChange={(e) => handleUpdateEtat(item.id, e.target.value)}
+                                                    style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid var(--border)',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        backgroundColor: (etatColors[item[col]] || etatColors['En Attente']).bg,
+                                                        color: (etatColors[item[col]] || etatColors['En Attente']).color,
+                                                    }}
+                                                >
+                                                    {etatOptions.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <>{typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col])}</>
+                                            )}
                                             {tableName === 'stock' && col === 'quantite' && item[col] < 20 && (
                                                 <span style={{
                                                     marginLeft: '8px',

@@ -13,7 +13,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 
-const Sidebar = ({ tables, activeTable, onTableChange, isOpen, toggleSidebar }) => {
+const Sidebar = ({ tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar }) => {
     const tableIcons = {
         medicaments: <Package size={18} />,
         stock: <Database size={18} />,
@@ -45,16 +45,21 @@ const Sidebar = ({ tables, activeTable, onTableChange, isOpen, toggleSidebar }) 
                 <div style={{ padding: '12px 14px 4px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Databases
                 </div>
-                {tables.map(table => (
-                    <div
-                        key={table}
-                        className={`nav-item ${activeTable === table ? 'active' : ''}`}
-                        onClick={() => onTableChange(table)}
-                    >
-                        {tableIcons[table] || <Database size={18} />}
-                        <span style={{ fontSize: 14 }}>{table.charAt(0).toUpperCase() + table.slice(1)}</span>
-                    </div>
-                ))}
+                {tables.map(table => {
+                    const isInactive = inactiveTables.includes(table);
+                    return (
+                        <div
+                            key={table}
+                            className={`nav-item ${activeTable === table ? 'active' : ''} ${isInactive ? 'inactive' : ''}`}
+                            onClick={() => !isInactive && onTableChange(table)}
+                            style={isInactive ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                        >
+                            {tableIcons[table] || <Database size={18} />}
+                            <span style={{ fontSize: 14, flex: 1 }}>{table.charAt(0).toUpperCase() + table.slice(1)}</span>
+                            {isInactive && <span style={{ fontSize: '9px', fontWeight: 600, backgroundColor: 'var(--surface-hover)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-muted)' }}>SOON</span>}
+                        </div>
+                    );
+                })}
 
                 <div style={{ marginTop: '20px', padding: '0 14px 4px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Workspaces

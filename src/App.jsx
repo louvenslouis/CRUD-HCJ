@@ -7,6 +7,7 @@ import { Sun, Moon, Command, Search as SearchIcon } from 'lucide-react';
 
 function App() {
   const tables = ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties'];
+  const inactiveTables = ['timesheet', 'ordonnances'];
   const [currentTable, setCurrentTable] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingEntity, setEditingEntity] = useState(null);
@@ -54,6 +55,7 @@ function App() {
     <div className="app-container" data-theme={theme}>
       <Sidebar
         tables={tables}
+        inactiveTables={inactiveTables}
         activeTable={currentTable}
         onTableChange={(t) => { setCurrentTable(t); setIsSearchOpen(false); }}
         isOpen={isSidebarOpen}
@@ -112,7 +114,7 @@ function App() {
               </div>
               <div style={{ padding: '8px 0' }}>
                 <div style={{ padding: '8px 16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Suggested Tables</div>
-                {tables.map(t => (
+                {tables.filter(t => !inactiveTables.includes(t)).map(t => (
                   <div
                     key={t}
                     onClick={() => { setCurrentTable(t); setIsSearchOpen(false); }}

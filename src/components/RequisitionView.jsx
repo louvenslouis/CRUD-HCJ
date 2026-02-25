@@ -14,7 +14,7 @@ const etatColors = {
     'Rejeté': { bg: 'rgba(235, 87, 87, 0.15)', color: '#eb5757' },
 };
 
-const RequisitionView = () => {
+const RequisitionView = ({ onNew }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('En Attente');
@@ -107,6 +107,14 @@ const RequisitionView = () => {
 
     return (
         <div className="requisition-view" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0', color: 'var(--text)' }}>Réquisitions</h1>
+                <button onClick={onNew} className="btn" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 600 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                    <span>Nouvelle</span>
+                </button>
+            </div>
+
             {/* Tabs */}
             <div className="requisition-tabs" style={{ display: 'flex', gap: '4px', marginBottom: '20px', backgroundColor: 'var(--sidebar-bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 {TABS.map(tab => (

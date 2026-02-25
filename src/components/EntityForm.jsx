@@ -8,8 +8,99 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         patients: ['prenom', 'nom', 'date_naissance', 'sexe', 'telephone'],
         medicaments: ['Nom', 'description', 'Type', 'barcode', 'Nom_generique', 'Pharmacie'],
         personnel: ['id', 'Nom', 'Prenom', 'role', 'Function', 'service', 'Mail', 'Phone'],
-        timesheet: ['id_employe', 'activites', 'date', 'nombre_heure']
+        timesheet: ['id_employe', 'activites', 'date', 'nombre_heure'],
+        decaissement: ['date', 'beneficiaire', 'motif', 'detail', 'montant', 'devise', 'montant_lettres']
     };
+
+    const convertAmountToFrenchWords = (amount, currency) => {
+        if (!amount || isNaN(amount)) return '';
+
+        const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
+        const teens = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+        const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+
+        const formatGroup = (n, isLastGroup = false) => {
+            let res = '';
+            const h = Math.floor(n / 100);
+            const r = n % 100;
+            const t = Math.floor(r / 10);
+            const u = r % 10;
+
+            if (h > 0) {
+                if (h > 1) res += units[h] + ' ';
+                res += 'cent';
+                if (h > 1 && r === 0 && isLastGroup) res += 's';
+                if (r > 0) res += ' ';
+            }
+
+            if (r > 0) {
+                if (r < 10) {
+                    res += units[r];
+                } else if (r < 20) {
+                    res += teens[r - 10];
+                } else {
+                    const is70s = t === 7;
+                    const is90s = t === 9;
+                    const baseTen = (is70s || is90s) ? t - 1 : t;
+                    const baseUnit = (is70s || is90s) ? u + 10 : u;
+
+                    res += tens[baseTen];
+
+                    if (baseUnit === 1 || baseUnit === 11) {
+                        res += ' et ';
+                    } else if (baseUnit > 0) {
+                        res += '-';
+                    }
+
+                    if (baseUnit < 10) {
+                        if (baseUnit > 0) res += units[baseUnit];
+                        if (r === 80 && isLastGroup) res += 's';
+                    } else {
+                        res += teens[baseUnit - 10];
+                    }
+                }
+            }
+            return res.trim();
+        };
+
+        const convertInteger = (n) => {
+            if (n === 0) return 'zéro';
+            let parts = [];
+            const billion = Math.floor(n / 1000000000);
+            const million = Math.floor((n % 1000000000) / 1000000);
+            const thousand = Math.floor((n % 1000000) / 1000);
+            const remainder = Math.floor(n % 1000);
+
+            if (billion > 0) parts.push(formatGroup(billion) + ' milliard' + (billion > 1 ? 's' : ''));
+            if (million > 0) parts.push(formatGroup(million) + ' million' + (million > 1 ? 's' : ''));
+            if (thousand > 0) {
+                if (thousand === 1) parts.push('mille');
+                else parts.push(formatGroup(thousand) + ' mille');
+            }
+            if (remainder > 0) parts.push(formatGroup(remainder, true));
+
+            return parts.join(' ');
+        };
+
+        const intPart = Math.floor(amount);
+        const decPart = Math.round((amount - intPart) * 100);
+
+        let result = convertInteger(intPart);
+        
+        // Currency handling
+        const isGourdes = currency === 'Gourdes';
+        const mainCurrency = isGourdes ? 'Gourde' : 'Dollar américain';
+        const subCurrency = isGourdes ? 'centime' : 'cent';
+
+        result += ' ' + mainCurrency + (intPart > 1 ? 's' : '');
+        
+        if (decPart > 0) {
+            result += ' et ' + convertInteger(decPart) + ' ' + subCurrency + (decPart > 1 ? 's' : '');
+        }
+
+        return result.charAt(0).toUpperCase() + result.slice(1);
+    };
+
     const medicamentTypeOptions = [
         'Comprimé',
         'Goutte',
@@ -19,6 +110,7 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         'Solution injectable',
         'lotion'
     ];
+    const deviseOptions = ['Gourdes', 'Dollars américain'];
 
     const getInitialFields = () => {
         if (entity) {
@@ -29,24 +121,43 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         return tableTemplates[tableName] || [];
     };
 
-    const [formData, setFormData] = useState(() => ({
-        ...(initialData || {}),
-        ...(entity || {})
-    }));
+    const [formData, setFormData] = useState(() => {
+        const initial = {
+            ...(initialData || {}),
+            ...(entity || {})
+        };
+        
+        // Default date for decaissement
+        if (tableName === 'decaissement' && !initial.date) {
+            initial.date = new Date().toISOString().split('T')[0];
+        }
+        
+        return initial;
+    });
     const [loading, setLoading] = useState(false);
     const fields = getInitialFields();
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         let finalValue = value;
-        const numericFields = ['quantite', 'prix_vente', 'nombre_heure', 'institution_id'];
+        const numericFields = ['quantite', 'prix_vente', 'nombre_heure', 'institution_id', 'montant'];
         if (numericFields.includes(name)) {
             finalValue = value === '' ? null : (value.includes('.') ? parseFloat(value) : parseInt(value, 10));
         }
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : finalValue
-        }));
+
+        setFormData(prev => {
+            const next = {
+                ...prev,
+                [name]: type === 'checkbox' ? checked : finalValue
+            };
+
+            // Auto-generate words for decaissement
+            if (tableName === 'decaissement' && (name === 'montant' || name === 'devise')) {
+                next.montant_lettres = convertAmountToFrenchWords(next.montant, next.devise);
+            }
+
+            return next;
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -93,6 +204,130 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderInput = (field) => {
+        const isLocked = lockedFields.includes(field);
+        const value = formData[field] === null ? '' : formData[field] || '';
+
+        if (tableName === 'medicaments' && field === 'Type') {
+            return (
+                <select
+                    name={field}
+                    value={value}
+                    onChange={handleChange}
+                    disabled={isLocked}
+                    style={{
+                        border: 'none',
+                        padding: '4px 0',
+                        fontSize: '14px',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        color: 'var(--text)',
+                        opacity: isLocked ? 0.7 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                    }}
+                >
+                    <option value="" disabled>Select type...</option>
+                    {medicamentTypeOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+            );
+        }
+
+        if (tableName === 'decaissement' && field === 'devise') {
+            return (
+                <select
+                    name={field}
+                    value={value}
+                    onChange={handleChange}
+                    disabled={isLocked}
+                    style={{
+                        border: 'none',
+                        padding: '4px 0',
+                        fontSize: '14px',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        color: 'var(--text)',
+                        opacity: isLocked ? 0.7 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                    }}
+                >
+                    <option value="" disabled>Choisir la devise...</option>
+                    {deviseOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+            );
+        }
+
+        if (field === 'detail' || field === 'description') {
+            return (
+                <textarea
+                    name={field}
+                    value={value}
+                    onChange={handleChange}
+                    disabled={isLocked}
+                    rows={3}
+                    style={{
+                        border: 'none',
+                        padding: '4px 0',
+                        fontSize: '14px',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        color: 'var(--text)',
+                        opacity: isLocked ? 0.7 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'text',
+                        resize: 'none',
+                        fontFamily: 'inherit'
+                    }}
+                    placeholder="Empty"
+                />
+            );
+        }
+
+        if (field === 'date') {
+            return (
+                <input
+                    type="date"
+                    name={field}
+                    value={value}
+                    onChange={handleChange}
+                    readOnly={isLocked}
+                    style={{
+                        border: 'none',
+                        padding: '4px 0',
+                        fontSize: '14px',
+                        opacity: isLocked ? 0.7 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'text',
+                        backgroundColor: 'transparent',
+                        color: 'var(--text)',
+                        width: '100%'
+                    }}
+                />
+            );
+        }
+
+        return (
+            <input
+                name={field}
+                value={value}
+                onChange={handleChange}
+                readOnly={isLocked}
+                style={{
+                    border: 'none',
+                    padding: '4px 0',
+                    fontSize: '14px',
+                    opacity: isLocked ? 0.7 : 1,
+                    cursor: isLocked ? 'not-allowed' : 'text',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text)',
+                    width: '100%'
+                }}
+                placeholder="Empty"
+            />
+        );
     };
 
     return (
@@ -144,48 +379,7 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
                                     {field.replace('_', ' ')}
                                 </div>
                                 <div className="entity-form-input" style={{ flex: 1 }}>
-                                    {tableName === 'medicaments' && field === 'Type' ? (
-                                        <select
-                                            name={field}
-                                            value={formData[field] === null ? '' : formData[field] || ''}
-                                            onChange={handleChange}
-                                            disabled={lockedFields.includes(field)}
-                                            style={{
-                                                border: 'none',
-                                                padding: '4px 0',
-                                                fontSize: '14px',
-                                                backgroundColor: 'transparent',
-                                                width: '100%',
-                                                color: 'var(--text)',
-                                                opacity: lockedFields.includes(field) ? 0.7 : 1,
-                                                cursor: lockedFields.includes(field) ? 'not-allowed' : 'pointer',
-                                            }}
-                                        >
-                                            <option value="" disabled>
-                                                Select type...
-                                            </option>
-                                            {medicamentTypeOptions.map(option => (
-                                                <option key={option} value={option}>
-                                                    {option}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <input
-                                            name={field}
-                                            value={formData[field] === null ? '' : formData[field] || ''}
-                                            onChange={handleChange}
-                                            readOnly={lockedFields.includes(field)}
-                                            style={{
-                                                border: 'none',
-                                                padding: '4px 0',
-                                                fontSize: '14px',
-                                                opacity: lockedFields.includes(field) ? 0.7 : 1,
-                                                cursor: lockedFields.includes(field) ? 'not-allowed' : 'text',
-                                            }}
-                                            placeholder={`Empty`}
-                                        />
-                                    )}
+                                    {renderInput(field)}
                                 </div>
                             </div>
                         ))}

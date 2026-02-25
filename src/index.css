@@ -184,7 +184,16 @@ body {
   }
 }
 
+/* Mobile and Desktop visibility utilities */
+.mobile-only {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
+  .mobile-only {
+    display: inline-flex !important;
+  }
+
   .sidebar {
     position: fixed;
     transform: translateX(-100%);
@@ -213,10 +222,6 @@ body {
     display: none !important;
   }
 
-  .mobile-only {
-    display: inline-flex !important;
-  }
-
   .header {
     flex-wrap: wrap;
     height: auto;
@@ -242,10 +247,6 @@ body {
   .search-button span:last-child {
     display: none;
   }
-}
-
-.mobile-only {
-  display: none;
 }
 
 /* Notion Table Style */
@@ -414,6 +415,7 @@ input:focus {
 }
 
 @media (max-width: 640px) {
+
   .data-table-actions .btn,
   .data-table-actions .btn-primary {
     flex: 1 1 120px;
@@ -514,7 +516,336 @@ input:focus {
     gap: 6px;
   }
 
-  .entity-form-label {
-    width: 100% !important;
+}
+
+/* --- SubmitRequisition --- */
+.submit-req-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background);
+  color: var(--text);
+  overflow-y: auto;
+  position: relative;
+}
+
+.submit-req-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  text-align: center;
+  padding: 32px;
+  background-color: var(--background);
+  animation: fadeIn 0.4s ease;
+}
+
+.success-icon-container {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background-color: rgba(39, 174, 96, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.success-icon {
+  color: #27ae60;
+  animation: scaleBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes scaleBounce {
+  0% {
+    transform: scale(0);
   }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.submit-req-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: var(--background);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  background: rgba(var(--background-rgb, 255, 255, 255), 0.85);
+  /* fallback */
+}
+
+@supports (-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px)) {
+  [data-theme='dark'] .submit-req-header {
+    background: rgba(25, 25, 25, 0.85);
+  }
+}
+
+.submit-req-body {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.section-label .badge {
+  background-color: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.modern-input {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background-color: var(--sidebar-bg);
+  color: var(--text);
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus {
+  border-color: var(--primary);
+  background-color: var(--background);
+  box-shadow: 0 0 0 4px rgba(35, 131, 226, 0.1);
+  outline: none;
+}
+
+.modern-input.text-center {
+  padding-left: 14px;
+  /* remove icon padding */
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  background-color: var(--border);
+  border-radius: 16px;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.article-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.article-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.article-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.article-pres {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.article-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.article-qty {
+  font-weight: 600;
+  background-color: var(--surface-hover);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.delete-btn {
+  color: #eb5757;
+  background-color: rgba(235, 87, 87, 0.1);
+  width: 36px;
+  height: 36px;
+}
+
+.delete-btn:hover {
+  background-color: #eb5757;
+  color: white;
+}
+
+.add-article-panel {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.panel-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.w-32 {
+  width: 80px;
+}
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--surface-hover);
+  color: var(--text);
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary:not(:disabled):hover {
+  background-color: var(--surface-active);
+}
+
+.submit-sticky-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px 32px;
+  background: linear-gradient(to top, var(--background) 70%, transparent);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+}
+
+@media (min-width: 768px) {
+  .submit-sticky-bar {
+    left: var(--sidebar-live-width);
+    padding-bottom: 20px;
+  }
+}
+
+.btn-submit-primary {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-submit-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-submit-primary:not(:disabled):active {
+  opacity: 0.9;
 }

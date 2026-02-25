@@ -19,10 +19,13 @@ import {
     Award,
     BookOpen,
     Briefcase,
-    Timer
+    Timer,
+    Sun,
+    Moon,
+    LogOut
 } from 'lucide-react';
 
-const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false, onLock }) => {
+const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false, onLock, user, onLogout, onToggleTheme, theme }) => {
     const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
     const currentWorkspace = workspaces[currentWorkspaceKey];
 
@@ -141,13 +144,66 @@ const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, i
                 </div>
             </div>
 
-            <div
-                onClick={onLock}
-                className="nav-item"
-                style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}
-            >
-                <Lock size={16} />
-                <span>Verrouiller</span>
+            {/* Bottom section: User, Theme/Logout, Lock */}
+            <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* User row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <User size={14} />
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user?.Prenom || ''} {user?.Nom || ''}
+                    </span>
+                </div>
+
+                {/* Theme + Logout row */}
+                <div style={{ display: 'flex', gap: '8px', padding: '4px 0' }}>
+                    <div
+                        onClick={onToggleTheme}
+                        className="nav-item theme-toggle-btn"
+                        style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '6px',
+                            fontSize: 13,
+                            color: theme === 'light' ? '#6366f1' : '#fbbf24',
+                            backgroundColor: theme === 'light' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                            cursor: 'pointer',
+                            justifyContent: 'center',
+                            border: '1px solid currentColor'
+                        }}
+                        title={theme === 'light' ? 'Switch to Dark' : 'Switch to Light'}
+                    >
+                        {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+                    </div>
+                    <div
+                        onClick={onLogout}
+                        className="nav-item logout-btn"
+                        style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '6px',
+                            fontSize: 13,
+                            color: '#ffffff',
+                            backgroundColor: '#ef4444',
+                            cursor: 'pointer',
+                            justifyContent: 'center'
+                        }}
+                        title="Déconnexion"
+                    >
+                        <LogOut size={16} />
+                    </div>
+                </div>
+
+                {/* Lock row */}
+                <div
+                    onClick={onLock}
+                    className="nav-item"
+                    style={{ padding: '6px 10px', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                    <Lock size={15} />
+                    <span>Verrouiller</span>
+                </div>
             </div>
         </div>
     );

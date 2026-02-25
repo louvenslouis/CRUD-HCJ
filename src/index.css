@@ -841,6 +841,12 @@ input:focus {
   transition: all 0.2s ease;
 }
 
+.search-button:hover {
+  background-color: var(--surface-hover) !important;
+  border-color: var(--primary) !important;
+  color: var(--text) !important;
+}
+
 .btn-submit-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;

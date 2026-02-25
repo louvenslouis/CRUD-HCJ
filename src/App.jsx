@@ -7,6 +7,7 @@ import RequisitionView from './components/RequisitionView';
 import SubmitRequisition from './components/SubmitRequisition';
 import Login from './components/Login';
 import LockScreen from './components/LockScreen';
+import CommandPalette from './components/CommandPalette';
 import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight, Menu, Building2, Briefcase, Users as UsersIcon, User as UserIcon, LogOut } from 'lucide-react';
 
 function App() {
@@ -188,6 +189,10 @@ function App() {
           width={sidebarCollapsed ? 0 : sidebarWidth}
           collapsed={sidebarCollapsed}
           onLock={() => setIsLocked(true)}
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={() => { setUser(null); localStorage.removeItem('hcj_user'); }}
         />
 
         {isSidebarOpen && (
@@ -220,11 +225,12 @@ function App() {
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           style={{
             position: 'fixed',
-            left: sidebarCollapsed ? 8 : 'calc(var(--sidebar-live-width) - 14px)',
-            top: 12,
+            left: sidebarCollapsed ? '12px' : `calc(${sidebarWidth}px - 12px)`,
+            top: '50%',
+            transform: 'translateY(-50%)',
             zIndex: 1002,
-            width: '28px',
-            height: '28px',
+            width: '24px',
+            height: '24px',
             borderRadius: '50%',
             border: '1px solid var(--border)',
             backgroundColor: 'var(--background)',
@@ -232,10 +238,20 @@ function App() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            transition: 'left 0.2s ease',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            transition: 'left 0.2s ease, opacity 0.2s, background-color 0.2s',
+            opacity: 0.6,
+            visibility: isSidebarOpen ? 'hidden' : 'visible'
           }}
           className="sidebar-toggle"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.backgroundColor = 'var(--background)';
+          }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {sidebarCollapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
@@ -255,79 +271,45 @@ function App() {
               <button
                 className="btn search-button"
                 onClick={() => setIsSearchOpen(true)}
-                style={{ border: 'none', backgroundColor: 'var(--surface-hover)', padding: '4px 12px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                style={{
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--sidebar-bg)',
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  borderRadius: '8px',
+                  width: '100%',
+                  maxWidth: '320px',
+                  transition: 'all 0.2s',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                }}
               >
-                <Command size={14} />
-                <span>Search / Jump to...</span>
-                <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: '8px' }}>⌘K</span>
+                <SearchIcon size={14} />
+                <span style={{ flex: 1, textAlign: 'left' }}>Rechercher...</span>
+                <div style={{
+                  fontSize: '10px',
+                  opacity: 0.6,
+                  backgroundColor: 'var(--surface-hover)',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border)',
+                  fontWeight: 600
+                }}>⌘ K</div>
               </button>
             </div>
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button className="btn-icon" onClick={toggleTheme} title="Toggle Theme">
-                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '4px', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                  <UserIcon size={18} />
-                </div>
-                <button
-                  className="btn-icon"
-                  onClick={() => {
-                    setUser(null);
-                    localStorage.removeItem('hcj_user');
-                  }}
-                  title="Déconnexion"
-                >
-                  <LogOut size={18} />
-                </button>
-              </div>
             </div>
           </header>
 
-          {isSearchOpen && (
-            <div className="command-palette">
-              <div className="command-palette-panel">
-                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <SearchIcon size={20} color="var(--text-muted)" />
-                  <input
-                    autoFocus
-                    placeholder="Type a table name to jump to..."
-                    style={{ border: 'none', flex: 1, fontSize: '16px', outline: 'none' }}
-                    onChange={(e) => {
-                      const val = e.target.value.toLowerCase();
-                      const match = currentWorkspace.tables.find(t => t.includes(val));
-                      if (match && e.key === 'Enter') {
-                        setCurrentTable(match);
-                        setIsSearchOpen(false);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      const val = e.target.value.toLowerCase();
-                      const match = currentWorkspace.tables.find(t => t.includes(val));
-                      if (match && e.key === 'Enter') {
-                        setCurrentTable(match);
-                        setIsSearchOpen(false);
-                      }
-                    }}
-                  />
-                </div>
-                <div style={{ padding: '8px 0' }}>
-                  <div style={{ padding: '8px 16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Suggested Tables</div>
-                  {currentWorkspace.tables.filter(t => !currentWorkspace.inactiveTables.includes(t)).map(t => (
-                    <div
-                      key={t}
-                      onClick={() => { setCurrentTable(t); setIsSearchOpen(false); }}
-                      style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
-                      className="nav-item"
-                    >
-                      <span>{t}</span>
-                      <span style={{ fontSize: '12px', opacity: 0.5 }}>Jump to</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <CommandPalette
+            isOpen={isSearchOpen}
+            onClose={() => setIsSearchOpen(false)}
+            onNavigate={(t) => { setCurrentTable(t); setIsSearchOpen(false); setIsSidebarOpen(false); }}
+            currentWorkspace={currentWorkspace}
+          />
 
           <div className="content-body">
             {currentTable === 'dashboard' ? (

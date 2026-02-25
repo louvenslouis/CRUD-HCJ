@@ -1,128 +1,97 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Lock, Mail, ArrowRight, Activity, AlertCircle } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Activity } from 'lucide-react';
 
-const Login = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('');
-  const [pin, setPin] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const LockScreen = ({ user, onUnlock }) => {
+    const [pin, setPin] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    const handleUnlock = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
 
-    try {
-      const { data, error: dbError } = await supabase
-        .from('personnel')
-        .select('*')
-        .eq('Mail', email)
-        .eq('pin_code', pin)
-        .single();
+        try {
+            const { data, error: dbError } = await supabase
+                .from('personnel')
+                .select('*')
+                .eq('id', user.id)
+                .eq('pin_code', pin)
+                .single();
 
-      if (dbError || !data) {
-        throw new Error('Identifiants incorrects. Veuillez vérifier votre e-mail et votre code PIN.');
-      }
+            if (dbError || !data) {
+                throw new Error('Code PIN incorrect.');
+            }
 
-      const { data: settingsData } = await supabase
-        .from('settings')
-        .select('admin_site')
-        .eq('personnel_ID', data.id)
-        .single();
+            onUnlock();
+        } catch (err) {
+            setError(err.message || 'Une erreur est survenue.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      const adminSites = settingsData?.admin_site || [];
-      const hasJuvenat = adminSites.includes('juvenat');
-      const hasBureau = adminSites.includes('bureau');
-      const hasRH = adminSites.includes('rh');
-
-      if (!hasJuvenat && !hasBureau && !hasRH) {
-        throw new Error("Vous n'êtes pas autorisé à accéder aux espaces de l'application.");
-      }
-
-      const userData = { ...data, admin_site: adminSites };
-      onLoginSuccess(userData);
-    } catch (err) {
-      setError(err.message || 'Une erreur est survenue.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="login-container">
-      <div className="login-background">
-        <div className="blob blob-1"></div>
-        <div className="blob blob-2"></div>
-      </div>
-
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo-container">
-            <Activity size={32} className="logo-icon" />
-          </div>
-          <h1>Bienvenue</h1>
-          <p>Connectez-vous à l'Hôpital de Juvenat</p>
-        </div>
-
-        {error && (
-          <div className="error-message">
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="login-form">
-          <div className="input-group">
-            <label>Adresse e-mail</label>
-            <div className="input-with-icon">
-              <Mail size={18} className="input-icon" />
-              <input
-                type="email"
-                required
-                placeholder="employe@hcj.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="modern-input"
-              />
+    return (
+        <div className="login-container">
+            <div className="login-background">
+                <div className="blob blob-1"></div>
+                <div className="blob blob-2"></div>
             </div>
-          </div>
 
-          <div className="input-group">
-            <label>Code PIN</label>
-            <div className="input-with-icon">
-              <Lock size={18} className="input-icon" />
-              <input
-                type="password"
-                required
-                placeholder="••••"
-                maxLength={8}
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                className="modern-input"
-              />
+            <div className="login-card">
+                <div className="login-header">
+                    <div className="logo-container">
+                        <Lock size={32} className="logo-icon" />
+                    </div>
+                    <h1>Session Verrouillée</h1>
+                    <p>Bonjour {user.Prenom || ''} {user.Nom || ''}, veuillez entrer votre PIN.</p>
+                </div>
+
+                {error && (
+                    <div className="error-message">
+                        <AlertCircle size={16} />
+                        <span>{error}</span>
+                    </div>
+                )}
+
+                <form onSubmit={handleUnlock} className="login-form">
+                    <div className="input-group">
+                        <label>Code PIN</label>
+                        <div className="input-with-icon">
+                            <Lock size={18} className="input-icon" />
+                            <input
+                                type="password"
+                                required
+                                placeholder="••••"
+                                maxLength={8}
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value)}
+                                className="modern-input"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="btn-primary login-btn"
+                        disabled={loading || !pin}
+                    >
+                        {loading ? (
+                            <span className="spinner"></span>
+                        ) : (
+                            <>
+                                Déverrouiller
+                                <ArrowRight size={18} />
+                            </>
+                        )}
+                    </button>
+                </form>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            className="btn-primary login-btn"
-            disabled={loading || !email || !pin}
-          >
-            {loading ? (
-              <span className="spinner"></span>
-            ) : (
-              <>
-                Se connecter
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
         .login-container {
           min-height: 100vh;
           display: flex;
@@ -182,7 +151,6 @@ const Login = ({ onLoginSuccess }) => {
           border-radius: 24px;
           width: 100%;
           max-width: 440px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
           animation: slideUp 0.5s ease-out;
         }
 
@@ -211,7 +179,6 @@ const Login = ({ onLoginSuccess }) => {
           justify-content: center;
           margin: 0 auto 24px;
           color: white;
-          box-shadow: 0 8px 16px rgba(35, 131, 226, 0.2);
         }
 
         .login-header h1 {
@@ -289,7 +256,6 @@ const Login = ({ onLoginSuccess }) => {
         .input-with-icon .modern-input:focus {
           background: var(--background);
           border-color: var(--primary);
-          box-shadow: 0 0 0 4px rgba(35, 131, 226, 0.1);
         }
 
         .input-with-icon .modern-input:focus + .input-icon {
@@ -338,8 +304,8 @@ const Login = ({ onLoginSuccess }) => {
           }
         }
       `}} />
-    </div>
-  );
+        </div>
+    );
 };
 
-export default Login;
+export default LockScreen;

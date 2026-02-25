@@ -6,7 +6,8 @@ import Dashboard from './components/Dashboard';
 import RequisitionView from './components/RequisitionView';
 import SubmitRequisition from './components/SubmitRequisition';
 import Login from './components/Login';
-import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight, Menu, Building2, Briefcase, User as UserIcon, LogOut } from 'lucide-react';
+import LockScreen from './components/LockScreen';
+import { Sun, Moon, Command, Search as SearchIcon, ChevronsLeft, ChevronsRight, Menu, Building2, Briefcase, Users as UsersIcon, User as UserIcon, LogOut } from 'lucide-react';
 
 function App() {
   const workspaces = {
@@ -14,8 +15,15 @@ function App() {
       name: 'Hopital de Juvenat',
       icon: <Building2 size={12} />,
       color: '#ff5f56',
-      tables: ['medicaments', 'stock', 'patients', 'personnel', 'timesheet', 'ordonnances', 'sorties', 'requisition'],
-      inactiveTables: ['timesheet', 'ordonnances']
+      tables: ['medicaments', 'stock', 'patients', 'ordonnances', 'sorties', 'requisition'],
+      inactiveTables: ['ordonnances']
+    },
+    'rh': {
+      name: 'Ressources Humaines',
+      icon: <UsersIcon size={12} />,
+      color: '#10b981',
+      tables: ['personnel', 'timesheet', 'rapport_temps', 'contrats', 'conges', 'evaluations', 'formations'],
+      inactiveTables: ['rapport_temps', 'contrats', 'conges', 'evaluations', 'formations']
     },
     'abc': {
       name: 'Administration Bureau Central',
@@ -41,6 +49,7 @@ function App() {
   const accessibleWorkspaces = user ? Object.fromEntries(
     Object.entries(workspaces).filter(([key]) => {
       if (key === 'hcj' && user.admin_site?.includes('juvenat')) return true;
+      if (key === 'rh' && user.admin_site?.includes('rh')) return true;
       if (key === 'abc' && user.admin_site?.includes('bureau')) return true;
       return false;
     })
@@ -48,6 +57,24 @@ function App() {
 
   const actualWorkspaceKey = accessibleWorkspaces[currentWorkspaceKey] ? currentWorkspaceKey : Object.keys(accessibleWorkspaces)[0];
   const currentWorkspace = accessibleWorkspaces[actualWorkspaceKey] || workspaces['hcj'];
+
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    if (!user || isLocked) return;
+    let timeout;
+    const resetTimer = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setIsLocked(true), 120000); // 120,000 ms = 2 minutes
+    };
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(name => document.addEventListener(name, resetTimer, true));
+    resetTimer();
+    return () => {
+      clearTimeout(timeout);
+      events.forEach(name => document.removeEventListener(name, resetTimer, true));
+    };
+  }, [user, isLocked]);
 
   const [currentTable, setCurrentTable] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -137,6 +164,8 @@ function App() {
         setUser(userData);
         localStorage.setItem('hcj_user', JSON.stringify(userData));
       }} />
+    ) : isLocked ? (
+      <LockScreen user={user} onUnlock={() => setIsLocked(false)} />
     ) : (
       <div
         className="app-container"
@@ -158,6 +187,7 @@ function App() {
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           width={sidebarCollapsed ? 0 : sidebarWidth}
           collapsed={sidebarCollapsed}
+          onLock={() => setIsLocked(true)}
         />
 
         {isSidebarOpen && (

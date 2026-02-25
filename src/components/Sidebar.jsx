@@ -13,10 +13,16 @@ import {
     ClipboardList,
     CreditCard,
     ShoppingCart,
-    Wallet
+    Wallet,
+    Lock,
+    Calendar,
+    Award,
+    BookOpen,
+    Briefcase,
+    Timer
 } from 'lucide-react';
 
-const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false }) => {
+const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, inactiveTables = [], activeTable, onTableChange, isOpen, toggleSidebar, width = 240, collapsed = false, onLock }) => {
     const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
     const currentWorkspace = workspaces[currentWorkspaceKey];
 
@@ -26,6 +32,11 @@ const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, i
         patients: <Users size={18} />,
         personnel: <User size={18} />,
         timesheet: <Clock size={18} />,
+        rapport_temps: <Timer size={18} />,
+        contrats: <Briefcase size={18} />,
+        conges: <Calendar size={18} />,
+        evaluations: <Award size={18} />,
+        formations: <BookOpen size={18} />,
         ordonnances: <FileText size={18} />,
         sorties: <TrendingUp size={18} />,
         requisition: <ClipboardList size={18} />,
@@ -38,7 +49,13 @@ const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, i
         requisition: 'Requisitions',
         decaissement: 'Demande de décaissement',
         achats: 'Achats',
-        paies: 'Paies'
+        paies: 'Paies',
+        rapport_temps: 'Rapport de temps',
+        contrats: 'Contrats',
+        conges: 'Congés',
+        evaluations: 'Évaluations',
+        formations: 'Formations',
+        timesheet: 'Timesheet'
     };
 
     return (
@@ -124,9 +141,13 @@ const Sidebar = ({ workspaces, currentWorkspaceKey, onWorkspaceChange, tables, i
                 </div>
             </div>
 
-            <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-muted)' }}>
-                <Plus size={16} style={{ marginRight: '8px' }} />
-                New Page
+            <div
+                onClick={onLock}
+                className="nav-item"
+                style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}
+            >
+                <Lock size={16} />
+                <span>Verrouiller</span>
             </div>
         </div>
     );

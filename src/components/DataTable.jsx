@@ -3,8 +3,8 @@ import { supabase } from '../supabaseClient';
 import {
     Search,
     Plus,
-    Edit2,
-    Trash2,
+    Pencil,
+    Trash,
     ChevronLeft,
     ChevronRight,
     Loader2,
@@ -30,8 +30,15 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [selectedRequisition, setSelectedRequisition] = useState(null);
     const pageSize = 100;
 
-    // Columns to auto-hide for requisition table
-    const hiddenRequisitionCols = ['posted', 'article'];
+    // Columns to auto-hide per table
+    const hiddenCols = {
+        requisition: ['posted', 'article'],
+        stock: ['id', 'created_at'],
+        sorties: ['updated_at', 'institution_id', 'total_montant', 'id', 'patient_id', 'created_at']
+    };
+
+    const [sortiesArticles, setSortiesArticles] = useState({}); // { sorties_id: [articles] }
+    const [articlesPopup, setArticlesPopup] = useState(null); // { sorties_id, articles }
 
     useEffect(() => {
         setVisibleColumns([]);
@@ -60,6 +67,13 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             prix_vente,
             created_at
           `, { count: 'exact' });
+            } else if (tableName === 'sorties') {
+                query = supabase
+                    .from('sorties')
+                    .select(`
+            *,
+            patients:patient_id ( nom, prenom )
+          `, { count: 'exact' });
             }
 
             const { data: fetchedData, error } = await query
@@ -69,19 +83,31 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
 
             if (fetchedData && fetchedData.length > 0) {
                 const processedData = fetchedData.map(item => {
-                    if (item.medicaments) {
-                        const newItem = { ...item, medicament_nom: item.medicaments.Nom };
+                    const newItem = { ...item };
+                    if (newItem.medicaments) {
+                        newItem.medicament_nom = newItem.medicaments.Nom;
                         delete newItem.medicaments;
-                        return newItem;
                     }
-                    return item;
+                    if (newItem.patients) {
+                        const nomComplet = `${newItem.patients.nom || ''} ${newItem.patients.prenom || ''}`.trim();
+                        if (nomComplet) {
+                            // On place patient_nom à la place de patient_id
+                            const { patient_id, patients, ...rest } = newItem;
+                            return {
+                                ...rest,
+                                patient_nom: nomComplet
+                            };
+                        }
+                        delete newItem.patients;
+                    }
+                    return newItem;
                 });
                 setData(processedData);
                 const cols = Object.keys(processedData[0]);
                 setColumns(cols);
                 if (visibleColumns.length === 0) {
-                    const visible = tableName === 'requisition'
-                        ? cols.filter(c => !hiddenRequisitionCols.includes(c))
+                    const visible = hiddenCols[tableName]
+                        ? cols.filter(c => !hiddenCols[tableName].includes(c))
                         : cols;
                     setVisibleColumns(visible);
                 }
@@ -95,6 +121,26 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             setLoading(false);
         }
     };
+
+    // Fetch sorties_articles when on sorties table
+    useEffect(() => {
+        if (tableName !== 'sorties' || data.length === 0) return;
+        const ids = data.map(r => r.id).filter(Boolean);
+        if (!ids.length) return;
+        supabase
+            .from('sorties_articles')
+            .select('sorties_id, quantite, prix_unitaire, total, medicament_id, medicaments:medicament_id(Nom)')
+            .in('sorties_id', ids)
+            .then(({ data: arts }) => {
+                if (!arts) return;
+                const map = {};
+                arts.forEach(a => {
+                    if (!map[a.sorties_id]) map[a.sorties_id] = [];
+                    map[a.sorties_id].push({ ...a, nom: a.medicaments?.Nom || a.medicament_id });
+                });
+                setSortiesArticles(map);
+            });
+    }, [data, tableName]);
 
     const handleExportCSV = () => {
         if (data.length === 0) return;
@@ -313,9 +359,9 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                             type="checkbox"
                                             checked={visibleColumns.includes(col)}
                                             readOnly
-                                            style={{ cursor: 'pointer' }}
+                                            style={{ cursor: 'pointer', width: 'auto' }}
                                         />
-                                        <span style={{ fontSize: '13px', color: 'var(--text)' }}>{col.replace(/_/g, ' ')}</span>
+                                        <span style={{ fontSize: '13px', flex: 1 }}>{col.replace(/_/g, ' ')}</span>
                                     </div>
                                 ))}
                             </div>
@@ -341,6 +387,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                 {columns.filter(col => visibleColumns.includes(col)).map(col => (
                                     <th key={col} style={{ color: 'var(--text)' }}>{col.replace(/_/g, ' ').toUpperCase()}</th>
                                 ))}
+                                {tableName === 'sorties' && <th style={{ color: 'var(--text)' }}>MÉDICAMENTS</th>}
                                 <th style={{ width: '40px' }}></th>
                             </tr>
                         </thead>
@@ -363,6 +410,8 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                                 }}>
                                                     {item[col] || 'En Attente'}
                                                 </span>
+                                            ) : tableName === 'sorties' && col === 'date_sortie' ? (
+                                                <>{item[col] ? new Date(item[col]).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</>
                                             ) : (
                                                 <>{typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col] ?? '')}</>
                                             )}
@@ -383,6 +432,45 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                             )}
                                         </td>
                                     ))}
+                                    {/* Sorties: mini article cards column */}
+                                    {tableName === 'sorties' && (() => {
+                                        const arts = sortiesArticles[item.id] || [];
+                                        const visible = arts.slice(0, 3);
+                                        const hasMore = arts.length > 3;
+                                        return (
+                                            <td style={{ maxWidth: '280px' }}>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                    {visible.map((a, i) => (
+                                                        <span key={i} style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                            padding: '2px 8px', borderRadius: '20px',
+                                                            backgroundColor: 'rgba(35,131,226,0.1)',
+                                                            border: '1px solid rgba(35,131,226,0.2)',
+                                                            fontSize: '11px', color: 'var(--primary)', fontWeight: 500,
+                                                            whiteSpace: 'nowrap'
+                                                        }}>
+                                                            {a.nom}
+                                                            <span style={{ opacity: 0.7 }}>×{a.quantite}</span>
+                                                        </span>
+                                                    ))}
+                                                    {hasMore && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setArticlesPopup({ id: item.id, arts }); }}
+                                                            style={{
+                                                                display: 'inline-flex', alignItems: 'center',
+                                                                padding: '2px 8px', borderRadius: '20px',
+                                                                backgroundColor: 'var(--surface-hover)',
+                                                                border: '1px solid var(--border)',
+                                                                fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >+{arts.length - 3} autres</button>
+                                                    )}
+                                                    {arts.length === 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>}
+                                                </div>
+                                            </td>
+                                        );
+                                    })()}
                                     <td style={{ textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '4px', opacity: 0.5, justifyContent: 'flex-end' }}>
                                             {tableName === 'medicaments' && (
@@ -410,7 +498,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                                     if (tableName !== 'stock') onEdit(item);
                                                 }}
                                             >
-                                                <Edit2 size={14} />
+                                                <Pencil size={14} />
                                             </button>
                                             <button
                                                 className="btn-icon"
@@ -420,7 +508,7 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                                     if (tableName !== 'stock') handleDelete(item.id);
                                                 }}
                                             >
-                                                <Trash2 size={14} />
+                                                <Trash size={14} />
                                             </button>
                                         </div>
                                     </td>
@@ -436,6 +524,38 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 <button className="btn-icon" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}><ChevronLeft size={16} /></button>
                 <button className="btn-icon" onClick={() => setPage(p => p + 1)} disabled={data.length < pageSize}><ChevronRight size={16} /></button>
             </div>
+
+            {/* Articles popup for sorties */}
+            {articlesPopup && (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 2100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px' }}
+                    onClick={() => setArticlesPopup(null)}>
+                    <div style={{ backgroundColor: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '420px', maxHeight: '70vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                        onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Médicaments ({articlesPopup.arts.length})</span>
+                            <button className="btn-icon" onClick={() => setArticlesPopup(null)}><X size={16} /></button>
+                        </div>
+                        <div style={{ overflowY: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {articlesPopup.arts.map((a, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '10px 14px', borderRadius: '8px',
+                                    backgroundColor: 'var(--sidebar-bg)', border: '1px solid var(--border)'
+                                }}>
+                                    <div>
+                                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{a.nom}</div>
+                                        {a.prix_unitaire > 0 && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{a.prix_unitaire} HTG/u</div>}
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>×{a.quantite}</div>
+                                        {a.total > 0 && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.total} HTG</div>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Requisition Detail Modal */}
             {selectedRequisition && (

@@ -9,7 +9,8 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         medicaments: ['Nom', 'description', 'Type', 'barcode', 'Nom_generique', 'Pharmacie'],
         personnel: ['id', 'Nom', 'Prenom', 'role', 'Function', 'service', 'Mail', 'Phone'],
         timesheet: ['id_employe', 'activites', 'date', 'nombre_heure'],
-        decaissement: ['date', 'beneficiaire', 'motif', 'detail', 'montant', 'devise', 'montant_lettres']
+        paies: ['id_employe', 'date', 'montant_brut', 'retenues', 'montant_net'],
+        decaissement: ['date', 'demandeur', 'beneficiaire', 'motif', 'detail', 'statut', 'montant', 'devise', 'montant_lettres']
     };
 
     const convertAmountToFrenchWords = (amount, currency) => {
@@ -86,14 +87,14 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         const decPart = Math.round((amount - intPart) * 100);
 
         let result = convertInteger(intPart);
-        
+
         // Currency handling
         const isGourdes = currency === 'Gourdes';
         const mainCurrency = isGourdes ? 'Gourde' : 'Dollar américain';
         const subCurrency = isGourdes ? 'centime' : 'cent';
 
         result += ' ' + mainCurrency + (intPart > 1 ? 's' : '');
-        
+
         if (decPart > 0) {
             result += ' et ' + convertInteger(decPart) + ' ' + subCurrency + (decPart > 1 ? 's' : '');
         }
@@ -111,6 +112,7 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
         'lotion'
     ];
     const deviseOptions = ['Gourdes', 'Dollars américain'];
+    const decaissementStatutOptions = ['En Attente', 'Approuvé', 'Payé', 'Rejeté'];
 
     const getInitialFields = () => {
         if (entity) {
@@ -126,12 +128,12 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
             ...(initialData || {}),
             ...(entity || {})
         };
-        
+
         // Default date for decaissement
         if (tableName === 'decaissement' && !initial.date) {
             initial.date = new Date().toISOString().split('T')[0];
         }
-        
+
         return initial;
     });
     const [loading, setLoading] = useState(false);
@@ -256,6 +258,30 @@ const EntityForm = ({ tableName, entity, initialData, lockedFields = [], upsertS
                 >
                     <option value="" disabled>Choisir la devise...</option>
                     {deviseOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+            );
+        }
+        if (tableName === 'decaissement' && field === 'statut') {
+            return (
+                <select
+                    name={field}
+                    value={value || 'En Attente'}
+                    onChange={handleChange}
+                    disabled={isLocked}
+                    style={{
+                        border: 'none',
+                        padding: '4px 0',
+                        fontSize: '14px',
+                        backgroundColor: 'transparent',
+                        width: '100%',
+                        color: 'var(--text)',
+                        opacity: isLocked ? 0.7 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                    }}
+                >
+                    {decaissementStatutOptions.map(option => (
                         <option key={option} value={option}>{option}</option>
                     ))}
                 </select>

@@ -12,8 +12,17 @@ import {
     ArrowUpDown,
     MoreHorizontal,
     Download,
-    X
+    X,
+    Eye,
+    Printer,
+    Save,
+    User,
+    ArrowRight,
+    FileText,
+    ZoomIn,
+    ZoomOut
 } from 'lucide-react';
+import { createFilledDecaissementPdf, DECAISSEMENT_TEMPLATE_PDF_URL } from '../utils/decaissementPdf';
 
 const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [data, setData] = useState([]);
@@ -27,15 +36,32 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(0);
+    const [layoutMode, setLayoutMode] = useState('table');
     const [selectedRequisition, setSelectedRequisition] = useState(null);
+    const [selectedDecaissementDetail, setSelectedDecaissementDetail] = useState(null);
+    const [selectedDecaissement, setSelectedDecaissement] = useState(null);
+    const [decaissementPdfUrl, setDecaissementPdfUrl] = useState('');
+    const [decaissementPdfLoading, setDecaissementPdfLoading] = useState(false);
+    const [decaissementPdfError, setDecaissementPdfError] = useState('');
+    const [pdfViewMode, setPdfViewMode] = useState('FitH'); // 'FitH' or 'FitV'
     const pageSize = 100;
 
     // Columns to auto-hide per table
     const hiddenCols = {
         requisition: ['posted', 'article'],
-        stock: ['id', 'created_at'],
-        sorties: ['updated_at', 'institution_id', 'total_montant', 'id', 'patient_id', 'created_at']
+        stock: ['id', 'created_at', 'institution_id'],
+        sorties: ['updated_at', 'institution_id', 'total_montant', 'id', 'patient_id', 'created_at'],
+        decaissement: ['id', 'created_at', 'montant_lettres', 'devise', 'detail']
     };
+
+    const decaissementStatutColors = {
+        'En Attente': { bg: 'rgba(255, 183, 77, 0.15)', color: '#f5a623' },
+        'Rejeté': { bg: 'rgba(235, 87, 87, 0.15)', color: '#eb5757' },
+        'Approuvé': { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981' },
+        'Payé': { bg: 'rgba(35, 131, 226, 0.15)', color: 'var(--primary)' }
+    };
+
+    const [quickFilter, setQuickFilter] = useState('all'); // 'all', 'today', 'month', 'large', 'pending'
 
     const [sortiesArticles, setSortiesArticles] = useState({}); // { sorties_id: [articles] }
     const [articlesPopup, setArticlesPopup] = useState(null); // { sorties_id, articles }
@@ -43,10 +69,25 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
     useEffect(() => {
         setVisibleColumns([]);
         setSelectedRequisition(null);
+        setSelectedDecaissementDetail(null);
+        setSelectedDecaissement(null);
+        setLayoutMode('table');
         setSortConfig(null);
         setColumnFilters({});
         setPage(0);
+        setDecaissementPdfLoading(false);
+        setDecaissementPdfError('');
+        if (decaissementPdfUrl && decaissementPdfUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(decaissementPdfUrl);
+            setDecaissementPdfUrl('');
+        }
     }, [tableName]);
+
+    useEffect(() => () => {
+        if (decaissementPdfUrl && decaissementPdfUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(decaissementPdfUrl);
+        }
+    }, [decaissementPdfUrl]);
 
     useEffect(() => {
         fetchData();
@@ -171,6 +212,93 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
         }
     };
 
+    const handleUpdateDecaissementStatut = async (id, newStatut) => {
+        try {
+            const { error } = await supabase
+                .from('decaissement')
+                .update({ statut: newStatut })
+                .eq('id', id);
+
+            if (error) throw error;
+            setData(prev => prev.map(item => item.id === id ? { ...item, statut: newStatut } : item));
+            if (selectedDecaissementDetail?.id === id) {
+                setSelectedDecaissementDetail(prev => ({ ...prev, statut: newStatut }));
+            }
+        } catch (error) {
+            console.error('Error updating decaissement status:', error);
+            alert('Erreur lors de la mise à jour du statut');
+        }
+    };
+
+    const closeDecaissementPreview = () => {
+        setSelectedDecaissement(null);
+        setDecaissementPdfLoading(false);
+        setDecaissementPdfError('');
+        if (decaissementPdfUrl && decaissementPdfUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(decaissementPdfUrl);
+        }
+        setDecaissementPdfUrl('');
+    };
+
+
+
+    const handleShowDecaissementPdf = async (item) => {
+        setSelectedDecaissementDetail(null); // Close management modal if it was open
+        setSelectedDecaissement(item);
+        setDecaissementPdfLoading(true);
+        setDecaissementPdfError('');
+
+        if (decaissementPdfUrl && decaissementPdfUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(decaissementPdfUrl);
+        }
+        setDecaissementPdfUrl('');
+
+        try {
+            const blob = await createFilledDecaissementPdf(item);
+            const blobUrl = URL.createObjectURL(blob);
+            setDecaissementPdfUrl(blobUrl);
+        } catch (error) {
+            console.error('Error generating decaissement PDF:', error);
+            const details = error?.message ? ` (${error.message})` : '';
+            setDecaissementPdfError(`Impossible de pre-remplir le PDF automatiquement. Le modele vierge est affiche.${details}`);
+            setDecaissementPdfUrl(DECAISSEMENT_TEMPLATE_PDF_URL);
+        } finally {
+            setDecaissementPdfLoading(false);
+        }
+    };
+
+    const handlePrintDecaissement = () => {
+        if (!decaissementPdfUrl) return;
+        const popup = window.open(decaissementPdfUrl, '_blank', 'noopener,noreferrer');
+        if (!popup) {
+            alert("Impossible d'ouvrir la fenetre d'impression. Autorisez les popups.");
+        }
+    };
+
+    const handleDownloadDecaissement = () => {
+        if (!decaissementPdfUrl) return;
+        const link = document.createElement('a');
+        link.href = decaissementPdfUrl;
+        link.download = `demande_decaissement_${selectedDecaissement?.id || 'document'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handlePrevDecaissement = () => {
+        const currentIndex = filteredData.findIndex(item => item.id === selectedDecaissement?.id);
+        if (currentIndex > 0) {
+            handleShowDecaissementPdf(filteredData[currentIndex - 1]);
+        }
+    };
+
+    const handleNextDecaissement = () => {
+        const currentIndex = filteredData.findIndex(item => item.id === selectedDecaissement?.id);
+        if (currentIndex < filteredData.length - 1) {
+            handleShowDecaissementPdf(filteredData[currentIndex + 1]);
+        }
+    };
+
     const etatOptions = ['En Attente', 'Rejeté', 'Approuvé'];
     const etatColors = {
         'En Attente': { bg: 'rgba(255, 183, 77, 0.15)', color: '#f5a623' },
@@ -209,10 +337,34 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             if (!globalMatch) return false;
 
             // Column filters
-            return Object.entries(columnFilters).every(([col, filterVal]) => {
+            const columnMatch = Object.entries(columnFilters).every(([col, filterVal]) => {
                 if (!filterVal) return true;
                 return String(item[col] || '').toLowerCase().includes(filterVal.toLowerCase());
             });
+            if (!columnMatch) return false;
+
+            // Quick filters for decaissement
+            if (tableName === 'decaissement' && quickFilter !== 'all') {
+                const itemDate = item.date ? new Date(item.date) : null;
+                const now = new Date();
+
+                if (quickFilter === 'today') {
+                    if (!itemDate) return false;
+                    return itemDate.toDateString() === now.toDateString();
+                }
+                if (quickFilter === 'month') {
+                    if (!itemDate) return false;
+                    return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+                }
+                if (quickFilter === 'large') {
+                    return (Number(item.montant) || 0) >= 25000;
+                }
+                if (quickFilter === 'pending') {
+                    return item.statut === 'En Attente' || !item.statut;
+                }
+            }
+
+            return true;
         })
         .sort((a, b) => {
             if (!sortConfig) return 0;
@@ -222,6 +374,8 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             return 0;
         });
 
+    const isDecaissementBoard = tableName === 'decaissement' && layoutMode === 'board';
+
     return (
         <div className="data-table">
             <div className="data-table-title-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -229,13 +383,22 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
             </div>
 
             <div className="data-table-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                <div className="data-table-tabs" style={{ display: 'flex', gap: '16px' }}>
-                    <div className="btn" style={{ border: 'none', padding: '4px 8px' }}>
-                        <span style={{ borderBottom: '2px solid var(--text)', paddingBottom: '6px' }}>Table</span>
-                    </div>
-                    <div className="btn" style={{ border: 'none', padding: '4px 8px', color: 'var(--text-muted)' }}>
-                        <span>Board</span>
-                    </div>
+                <div className="data-table-tabs" style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        className="btn"
+                        onClick={() => setLayoutMode('table')}
+                        style={{ border: 'none', padding: '4px 8px', color: layoutMode === 'table' ? 'var(--text)' : 'var(--text-muted)' }}
+                    >
+                        <span style={layoutMode === 'table' ? { borderBottom: '2px solid var(--text)', paddingBottom: '6px' } : {}}>Table</span>
+                    </button>
+                    <button
+                        className="btn"
+                        onClick={() => tableName === 'decaissement' && setLayoutMode('board')}
+                        disabled={tableName !== 'decaissement'}
+                        style={{ border: 'none', padding: '4px 8px', color: layoutMode === 'board' ? 'var(--text)' : 'var(--text-muted)', opacity: tableName === 'decaissement' ? 1 : 0.45, cursor: tableName === 'decaissement' ? 'pointer' : 'not-allowed' }}
+                    >
+                        <span style={layoutMode === 'board' ? { borderBottom: '2px solid var(--text)', paddingBottom: '6px' } : {}}>Board</span>
+                    </button>
                 </div>
                 <div className="data-table-actions" style={{ display: 'flex', gap: '8px' }}>
                     <div className="data-table-search" style={{ position: 'relative' }}>
@@ -254,6 +417,36 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                             }}
                         />
                     </div>
+                    {tableName === 'decaissement' && (
+                        <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', borderLeft: '1px solid var(--border)', paddingLeft: '12px' }}>
+                            {[
+                                { id: 'all', label: 'Tous' },
+                                { id: 'today', label: 'Aujourd\'hui' },
+                                { id: 'month', label: 'Ce mois' },
+                                { id: 'large', label: '> 25k' },
+                                { id: 'pending', label: 'En attente' }
+                            ].map(filter => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => setQuickFilter(filter.id)}
+                                    style={{
+                                        padding: '5px 10px',
+                                        fontSize: '11px',
+                                        borderRadius: '16px',
+                                        border: '1px solid ' + (quickFilter === filter.id ? 'var(--primary)' : 'var(--border)'),
+                                        backgroundColor: quickFilter === filter.id ? 'rgba(35, 131, 226, 0.08)' : 'transparent',
+                                        color: quickFilter === filter.id ? 'var(--primary)' : 'var(--text-muted)',
+                                        fontWeight: quickFilter === filter.id ? 700 : 500,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {filter.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <div style={{ position: 'relative' }}>
                         <button className="btn" onClick={() => setShowFilterManager(!showFilterManager)} style={{ border: 'none' }}>
                             <Filter size={14} /> Filter {Object.values(columnFilters).some(v => v) && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--primary)', marginLeft: '4px' }}></span>}
@@ -377,9 +570,175 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 </div>
             </div>
 
+            {tableName === 'decaissement' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--sidebar-bg)' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Total Gourdes</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>
+                            {filteredData
+                                .filter(d => d.devise === 'Gourdes')
+                                .reduce((acc, curr) => acc + (Number(curr.montant) || 0), 0)
+                                .toLocaleString('fr-FR')} HTG
+                        </div>
+                    </div>
+                    <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--sidebar-bg)' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Total Dollars</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#10b981' }}>
+                            {filteredData
+                                .filter(d => d.devise === 'Dollars')
+                                .reduce((acc, curr) => acc + (Number(curr.montant) || 0), 0)
+                                .toLocaleString('fr-FR')} USD
+                        </div>
+                    </div>
+                    <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--sidebar-bg)' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Demandes</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--primary)' }}>
+                            {filteredData.length}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="table-container">
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 size={24} className="animate-spin" /></div>
+                ) : isDecaissementBoard ? (
+                    filteredData.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                            Aucune entree de decaissement
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                            {filteredData.map((item, idx) => (
+                                <div
+                                    key={item.id || idx}
+                                    onClick={() => setSelectedDecaissementDetail(item)}
+                                    style={{
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '12px',
+                                        padding: '20px',
+                                        backgroundColor: 'var(--background)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '12px',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                    className="hover-lift"
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.borderColor = 'var(--primary)';
+                                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.borderColor = 'var(--border)';
+                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    {/* Header: ID and Date */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div style={{
+                                            fontSize: '11px',
+                                            fontWeight: 700,
+                                            color: 'var(--primary)',
+                                            backgroundColor: 'rgba(35, 131, 226, 0.08)',
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            letterSpacing: '0.02em'
+                                        }}>
+                                            #{item.id}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                            {item.date ? new Date(item.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Date —'}
+                                        </div>
+                                    </div>
+
+                                    {/* Status Badge */}
+                                    <div style={{ display: 'flex', marginTop: '-4px' }}>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            fontWeight: 700,
+                                            padding: '2px 8px',
+                                            borderRadius: '10px',
+                                            backgroundColor: (decaissementStatutColors[item.statut] || decaissementStatutColors['En Attente']).bg,
+                                            color: (decaissementStatutColors[item.statut] || decaissementStatutColors['En Attente']).color,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.03em'
+                                        }}>
+                                            {item.statut || 'En Attente'}
+                                        </span>
+                                    </div>
+
+                                    {/* Amount Section */}
+                                    <div style={{ margin: '4px 0' }}>
+                                        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                            {item.montant?.toLocaleString('fr-FR') || '0'}
+                                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>{item.devise === 'Gourdes' ? 'HTG' : 'USD'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Details with Icons */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ color: 'var(--text-muted)', width: '16px', display: 'flex' }}><User size={14} /></div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>
+                                                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>De: </span>
+                                                {item.demandeur || '—'}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ color: 'var(--text-muted)', width: '16px', display: 'flex' }}><ArrowRight size={14} /></div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>
+                                                <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>À: </span>
+                                                {item.beneficiaire || '—'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Footer: Motif and Action */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            color: 'var(--text-muted)',
+                                            maxWidth: '180px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            fontStyle: item.motif ? 'normal' : 'italic'
+                                        }}>
+                                            {item.motif || 'Aucun motif précisé'}
+                                        </div>
+                                        <button
+                                            className="btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleShowDecaissementPdf(item);
+                                            }}
+                                            style={{
+                                                padding: '6px 12px',
+                                                fontSize: '12px',
+                                                borderRadius: '8px',
+                                                backgroundColor: 'var(--sidebar-bg)',
+                                                border: '1px solid var(--border)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontWeight: 600,
+                                                color: 'var(--primary)'
+                                            }}
+                                        >
+                                            <FileText size={14} />
+                                            PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
                 ) : (
                     <table>
                         <thead>
@@ -393,11 +752,18 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                         </thead>
                         <tbody>
                             {filteredData.map((item, idx) => (
-                                <tr key={item.id || idx} onClick={() => tableName === 'requisition' && setSelectedRequisition(item)} style={tableName === 'requisition' ? { cursor: 'pointer' } : {}}>
+                                <tr
+                                    key={item.id || idx}
+                                    onClick={() => {
+                                        if (tableName === 'requisition') setSelectedRequisition(item);
+                                        if (tableName === 'decaissement') setSelectedDecaissementDetail(item);
+                                    }}
+                                    style={tableName === 'requisition' || tableName === 'decaissement' ? { cursor: 'pointer' } : {}}
+                                >
                                     {columns.filter(col => visibleColumns.includes(col)).map(col => (
                                         <td key={col} style={{
                                             color: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? '#eb5757' : 'var(--text)',
-                                            fontWeight: (tableName === 'stock' && col === 'quantite' && item[col] < 20) ? 600 : 'inherit'
+                                            fontWeight: (tableName === 'stock' && col === 'quantite' && item[col] < 20) || (tableName === 'decaissement' && (col === 'montant' || col === 'beneficiaire')) ? 600 : 'inherit'
                                         }}>
                                             {tableName === 'requisition' && col === 'etat' ? (
                                                 <span style={{
@@ -412,6 +778,25 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                                 </span>
                                             ) : tableName === 'sorties' && col === 'date_sortie' ? (
                                                 <>{item[col] ? new Date(item[col]).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</>
+                                            ) : tableName === 'decaissement' && col === 'date' ? (
+                                                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                                                    {item[col] ? new Date(item[col]).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                                </span>
+                                            ) : tableName === 'decaissement' && col === 'montant' ? (
+                                                <span style={{ color: 'var(--text)', fontWeight: 700 }}>
+                                                    {item[col]?.toLocaleString('fr-FR')} <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item['devise'] === 'Gourdes' ? 'HTG' : 'USD'}</span>
+                                                </span>
+                                            ) : tableName === 'decaissement' && col === 'statut' ? (
+                                                <span style={{
+                                                    padding: '3px 10px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    backgroundColor: (decaissementStatutColors[item[col]] || decaissementStatutColors['En Attente']).bg,
+                                                    color: (decaissementStatutColors[item[col]] || decaissementStatutColors['En Attente']).color,
+                                                }}>
+                                                    {item[col] || 'En Attente'}
+                                                </span>
                                             ) : (
                                                 <>{typeof item[col] === 'object' ? JSON.stringify(item[col]) : String(item[col] ?? '')}</>
                                             )}
@@ -473,6 +858,20 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                                     })()}
                                     <td style={{ textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '4px', opacity: 0.5, justifyContent: 'flex-end' }}>
+                                            {tableName === 'decaissement' && (
+                                                <button
+                                                    className="btn"
+                                                    title="Afficher la demande de decaissement"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleShowDecaissementPdf(item);
+                                                    }}
+                                                    style={{ padding: '4px 10px', fontSize: '12px' }}
+                                                >
+                                                    <Eye size={13} />
+                                                    Afficher
+                                                </button>
+                                            )}
                                             {tableName === 'medicaments' && (
                                                 <button
                                                     className="btn-icon"
@@ -557,94 +956,369 @@ const DataTable = ({ tableName, onEdit, onCreate }) => {
                 </div>
             )}
 
-            {/* Requisition Detail Modal */}
-            {selectedRequisition && (
-                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'var(--modal-padding)' }}>
-                    <div className="modal-panel" style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                        {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Réquisition #{selectedRequisition.id}</h2>
-                            <button className="btn-icon" onClick={() => setSelectedRequisition(null)}><X size={18} /></button>
+
+
+            {selectedDecaissement && (
+                <div
+                    className="modal-overlay"
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 2200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '12px' }}
+                    onClick={closeDecaissementPreview}
+                >
+                    <div
+                        className="modal-panel"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            backgroundColor: 'var(--background)',
+                            width: '100%',
+                            maxWidth: '1150px',
+                            borderRadius: '16px',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                            overflow: 'hidden',
+                            height: '92vh',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            border: '1px solid var(--border)'
+                        }}
+                    >
+                        {/* Improved Header */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '16px 24px',
+                            borderBottom: '1px solid var(--border)',
+                            backgroundColor: 'var(--background)',
+                            zIndex: 10
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '10px',
+                                    backgroundColor: 'rgba(35, 131, 226, 0.1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--primary)'
+                                }}>
+                                    <FileText size={20} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+                                        Demande de décaissement #{selectedDecaissement.id}
+                                    </h2>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                        {selectedDecaissement.demandeur || 'Non précisé'} • {selectedDecaissement.date ? new Date(selectedDecaissement.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {/* Navigation Buttons */}
+                                <div style={{ display: 'flex', gap: '4px', marginRight: '8px' }}>
+                                    <button
+                                        className="btn-icon"
+                                        onClick={handlePrevDecaissement}
+                                        disabled={filteredData.findIndex(i => i.id === selectedDecaissement.id) === 0}
+                                        style={{ backgroundColor: 'var(--sidebar-bg)', width: '36px', height: '36px' }}
+                                        title="Précédent"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <button
+                                        className="btn-icon"
+                                        onClick={handleNextDecaissement}
+                                        disabled={filteredData.findIndex(i => i.id === selectedDecaissement.id) === filteredData.length - 1}
+                                        style={{ backgroundColor: 'var(--sidebar-bg)', width: '36px', height: '36px' }}
+                                        title="Suivant"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+
+                                {/* Zoom Toggle */}
+                                <button
+                                    className="btn-icon"
+                                    onClick={() => setPdfViewMode(pdfViewMode === 'FitH' ? 'FitV' : 'FitH')}
+                                    title={pdfViewMode === 'FitH' ? "Ajuster à la hauteur (dézoomer)" : "Ajuster à la largeur (zoomer)"}
+                                    style={{ backgroundColor: 'var(--sidebar-bg)', width: '36px', height: '36px', marginRight: '8px' }}
+                                >
+                                    {pdfViewMode === 'FitH' ? <ZoomOut size={18} /> : <ZoomIn size={18} />}
+                                </button>
+
+                                <button
+                                    className="btn"
+                                    onClick={handlePrintDecaissement}
+                                    disabled={decaissementPdfLoading || !decaissementPdfUrl}
+                                    style={{
+                                        backgroundColor: 'var(--primary)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 16px',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    <Printer size={16} />
+                                    Imprimer
+                                </button>
+                                <button
+                                    className="btn"
+                                    onClick={handleDownloadDecaissement}
+                                    disabled={decaissementPdfLoading || !decaissementPdfUrl}
+                                    style={{
+                                        padding: '8px 16px',
+                                        borderRadius: '8px',
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        backgroundColor: 'var(--background)',
+                                        border: '1px solid var(--border)'
+                                    }}
+                                >
+                                    <Save size={16} />
+                                    Sauvegarder
+                                </button>
+                                <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border)', margin: '0 4px' }} />
+                                <button
+                                    className="btn-icon"
+                                    onClick={closeDecaissementPreview}
+                                    style={{ width: '36px', height: '36px', borderRadius: '50%' }}
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
-                        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-                            {/* Meta info */}
-                            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                                <div>
-                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Personnel</div>
-                                    <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.personnel || '—'}</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
-                                    <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.created_at ? new Date(selectedRequisition.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
-                                </div>
+                        {decaissementPdfError && (
+                            <div style={{
+                                padding: '12px 24px',
+                                backgroundColor: 'rgba(235, 87, 87, 0.05)',
+                                color: '#eb5757',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                borderBottom: '1px solid rgba(235, 87, 87, 0.1)'
+                            }}>
+                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#eb5757' }} />
+                                {decaissementPdfError}
                             </div>
+                        )}
 
-                            {/* Etat status switcher */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Statut</div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {etatOptions.map(opt => (
-                                        <button
-                                            key={opt}
-                                            onClick={() => handleUpdateEtat(selectedRequisition.id, opt)}
-                                            style={{
-                                                padding: '8px 16px',
-                                                borderRadius: '20px',
-                                                border: selectedRequisition.etat === opt ? '2px solid ' + etatColors[opt].color : '1px solid var(--border)',
-                                                backgroundColor: selectedRequisition.etat === opt ? etatColors[opt].bg : 'transparent',
-                                                color: selectedRequisition.etat === opt ? etatColors[opt].color : 'var(--text-muted)',
-                                                fontWeight: 600,
-                                                fontSize: '13px',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                            }}
-                                        >
-                                            {opt}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Articles */}
-                            <div>
-                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Articles</div>
-                                {parseArticles(selectedRequisition.article).length > 0 ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {parseArticles(selectedRequisition.article).map((art, i) => (
-                                            <div key={i} style={{
-                                                padding: '12px 16px',
-                                                backgroundColor: 'var(--sidebar-bg)',
-                                                borderRadius: '6px',
-                                                border: '1px solid var(--border)',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                            }}>
-                                                <div>
-                                                    <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>{art.nom || art.name || art.Nom || art.article || `Article ${i + 1}`}</div>
-                                                    {art.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{art.description}</div>}
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    {(art.quantite || art.qty || art.quantity) && (
-                                                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>×{art.quantite || art.qty || art.quantity}</div>
-                                                    )}
-                                                    {(art.prix || art.price || art.prix_unitaire) && (
-                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{art.prix || art.price || art.prix_unitaire} HTG</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
+                        <div style={{
+                            flex: 1,
+                            backgroundColor: '#525659', // Viewer background typical of PDF viewers
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden'
+                        }}>
+                            {decaissementPdfLoading ? (
+                                <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--background)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                        <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary)' }} />
+                                        <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500 }}>Préparation du document...</span>
                                     </div>
-                                ) : (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '6px' }}>Aucun article</div>
-                                )}
-                            </div>
+                                </div>
+                            ) : (
+                                <iframe
+                                    key={`${selectedDecaissement.id}-${pdfViewMode}`}
+                                    title={`Demande de décaissement ${selectedDecaissement.id}`}
+                                    src={`${decaissementPdfUrl}#toolbar=1&navpanes=0&view=${pdfViewMode}`}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        border: 'none',
+                                        backgroundColor: '#525659'
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+
+            {/* Requisition Detail Modal */}
+            {
+                selectedRequisition && (
+                    <div className="modal-overlay" onClick={() => setSelectedRequisition(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'var(--modal-padding)' }}>
+                        <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '600px', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                                <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Réquisition #{selectedRequisition.id}</h2>
+                                <button className="btn-icon" onClick={() => setSelectedRequisition(null)}><X size={18} /></button>
+                            </div>
+
+                            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                                {/* Meta info */}
+                                <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Personnel</div>
+                                        <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.personnel || '—'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                                        <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedRequisition.created_at ? new Date(selectedRequisition.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div>
+                                    </div>
+                                </div>
+
+                                {/* Etat status switcher */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Statut</div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {etatOptions.map(opt => (
+                                            <button
+                                                key={opt}
+                                                onClick={() => handleUpdateEtat(selectedRequisition.id, opt)}
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '20px',
+                                                    border: selectedRequisition.etat === opt ? '2px solid ' + etatColors[opt].color : '1px solid var(--border)',
+                                                    backgroundColor: selectedRequisition.etat === opt ? etatColors[opt].bg : 'transparent',
+                                                    color: selectedRequisition.etat === opt ? etatColors[opt].color : 'var(--text-muted)',
+                                                    fontWeight: 600,
+                                                    fontSize: '13px',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                }}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Articles */}
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Articles</div>
+                                    {parseArticles(selectedRequisition.article).length > 0 ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {parseArticles(selectedRequisition.article).map((art, i) => (
+                                                <div key={i} style={{
+                                                    padding: '12px 16px',
+                                                    backgroundColor: 'var(--sidebar-bg)',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid var(--border)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)' }}>{art.nom || art.name || art.Nom || art.article || `Article ${i + 1}`}</div>
+                                                        {art.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{art.description}</div>}
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        {(art.quantite || art.qty || art.quantity) && (
+                                                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>×{art.quantite || art.qty || art.quantity}</div>
+                                                        )}
+                                                        {(art.prix || art.price || art.prix_unitaire) && (
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{art.prix || art.price || art.prix_unitaire} HTG</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '6px' }}>Aucun article</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                selectedDecaissementDetail && (
+                    <div className="modal-overlay" onClick={() => setSelectedDecaissementDetail(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 'var(--modal-padding)' }}>
+                        <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: 'var(--background)', width: '100%', maxWidth: '500px', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                                <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Décaissement #{selectedDecaissementDetail.id}</h2>
+                                <button className="btn-icon" onClick={() => setSelectedDecaissementDetail(null)}><X size={18} /></button>
+                            </div>
+                            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Demandeur</div>
+                                        <div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{selectedDecaissementDetail.demandeur || '—'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Bénéficiaire</div>
+                                        <div style={{ fontSize: '14px', color: 'var(--text)', fontWeight: 500 }}>{selectedDecaissementDetail.beneficiaire || '—'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Montant</div>
+                                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+                                            {selectedDecaissementDetail.montant?.toLocaleString('fr-FR')}
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>{selectedDecaissementDetail.devise === 'Gourdes' ? 'HTG' : 'USD'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                                        <div style={{ fontSize: '14px', color: 'var(--text)' }}>{selectedDecaissementDetail.date ? new Date(selectedDecaissementDetail.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}</div>
+                                    </div>
+                                </div>
+
+                                <div style={{ padding: '12px', backgroundColor: 'var(--sidebar-bg)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Motif</div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: 1.5 }}>{selectedDecaissementDetail.motif || 'Aucun motif précisé'}</div>
+                                </div>
+
+                                <div>
+                                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>Changer le statut</div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        {Object.keys(decaissementStatutColors).map(status => (
+                                            <button
+                                                key={status}
+                                                onClick={() => handleUpdateDecaissementStatut(selectedDecaissementDetail.id, status)}
+                                                style={{
+                                                    padding: '10px',
+                                                    borderRadius: '8px',
+                                                    fontSize: '13px',
+                                                    fontWeight: 600,
+                                                    textAlign: 'center',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    border: selectedDecaissementDetail.statut === status ? `2px solid ${decaissementStatutColors[status].color}` : '1px solid var(--border)',
+                                                    backgroundColor: selectedDecaissementDetail.statut === status ? decaissementStatutColors[status].bg : 'var(--background)',
+                                                    color: selectedDecaissementDetail.statut === status ? decaissementStatutColors[status].color : 'var(--text-muted)'
+                                                }}
+                                            >
+                                                {status}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className="btn"
+                                        style={{ flex: 1, backgroundColor: 'var(--primary)', color: 'white', padding: '10px' }}
+                                        onClick={() => handleShowDecaissementPdf(selectedDecaissementDetail)}
+                                    >
+                                        Générer PDF
+                                    </button>
+                                    <button
+                                        className="btn"
+                                        style={{ flex: 1, backgroundColor: 'var(--background)', border: '1px solid var(--border)', padding: '10px' }}
+                                        onClick={() => {
+                                            setSelectedDecaissementDetail(null);
+                                            onEdit(selectedDecaissementDetail);
+                                        }}
+                                    >
+                                        Modifier
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 
